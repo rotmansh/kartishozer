@@ -1,0 +1,50 @@
+name: Seed database (manual)
+
+# One-off/manual job to (re)seed the Phase 1 demo catalog into whichever
+# database DATABASE_URL/DIRECT_URL point at. Safe to re-run any number of
+# times — prisma/seed.ts uses upserts with fixed ids, so it never creates
+# duplicates and never touches real user/vendor/order rows.
+#
+# Needs two GitHub Actions repository secrets, set by a repo admin at
+# Settings -> Secrets and variables -> Actions -> New repository secret
+# (values copied from Vercel's Environment Variables page — never shared
+# with or visible to Claude):
+#   DATABASE_URL
+#   DIRECT_URL
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: kartishozer-web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: kartishozer-web
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: kartishozer-web
+        run: npx prisma generate
+
+      - name: Apply pending migrations
+        working-directory: kartishozer-web
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+      - name: Seed demo catalog
+        working-directory: kartishozer-web
+        run: npm run db:seed
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
