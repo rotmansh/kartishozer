@@ -1,0 +1,102 @@
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { Calendar, Clock, MapPin, Info, Ticket as TicketIcon } from "lucide-react";
+import { EVENTS, getEvent } from "@/lib/mock/events";
+import { getListingsByEvent } from "@/lib/mock/listings";
+import { getCategory } from "@/lib/mock/categories";
+import { fmtDateLong, fmtTime } from "@/lib/format";
+import { TopBar } from "@/components/layout/TopBar";
+import { ListingCard } from "@/components/ListingCard";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
+
+type Props = { params: { id: string } };
+
+export function generateStaticParams() {
+  return EVENTS.map((e) => ({ id: e.id }));
+}
+
+export function generateMetadata({ params }: Props): Metadata {
+  const event = getEvent(params.id);
+  return { title: event ? `${event.nameHe} | כרטיס חוזר` : "כרטיס חוזר" };
+}
+
+export default function EventDetailsPage({ params }: Props) {
+  const event = getEvent(params.id);
+  if (!event) notFound();
+
+  const listings = getListingsByEvent(event.id);
+  const category = getCategory(event.category);
+
+  return (
+    <div className="pb-6">
+      <TopBar transparent />
+
+      <div
+        className="-mt-14 pt-14 pb-8 px-4 text-white relative"
+        style={{ background: `linear-gradient(135deg, ${event.gradient[0]}, ${event.gradient[1]})` }}
+      >
+        <span className="text-5xl block mb-2">{event.emoji}</span>
+        {category && (
+          <span className="inline-block rounded-full bg-black/20 backdrop-blur px-2.5 py-1 text-[11px] font-bold mb-2">
+            {category.labelHe}
+          </span>
+        )}
+        <h1 className="text-xl font-black leading-snug">{event.nameHe}</h1>
+      </div>
+
+      <div className="px-4 -mt-4">
+        <div className="bg-white rounded-3xl shadow-card border border-ink-900/5 p-4 space-y-2.5">
+          <div className="flex items-center gap-2.5 text-sm">
+            <Calendar size={17} className="text-brand flex-shrink-0" />
+            <span className="text-ink-900 font-bold">{fmtDateLong(event.startsAt)}</span>
+          </div>
+          <div className="flex items-center gap-2.5 text-sm">
+            <Clock size={17} className="text-brand flex-shrink-0" />
+            <span className="text-ink-700">{fmtTime(event.startsAt)}</span>
+          </div>
+          <div className="flex items-center gap-2.5 text-sm">
+            <MapPin size={17} className="text-brand flex-shrink-0" />
+            <span className="text-ink-700">
+              {event.venue.nameHe}, {event.venue.city}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-ink-100 p-3.5">
+          <Info size={16} className="text-ink-500 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-ink-700 leading-relaxed">{event.descriptionHe}</p>
+        </div>
+
+        <div className="mt-7">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-black text-ink-900">
+              כרטיסים למכירה
+              {listings.length > 0 && <span className="text-ink-400 font-bold"> · {listings.length}</span>}
+            </h2>
+          </div>
+
+          {listings.length === 0 ? (
+            <EmptyState
+              icon={<TicketIcon size={24} />}
+              title="אין כרגע כרטיסים למכירה"
+              subtitle="היו הראשונים למכור כרטיס לאירוע הזה"
+              action={
+                <Link href={`/sell?eventId=${event.id}`}>
+                  <Button>למכירת כרטיס לאירוע זה</Button>
+                </Link>
+              }
+            />
+          ) : (
+            <div className="space-y-3">
+              {listings.map((l) => (
+                <ListingCard key={l.id} listing={l} showEvent={false} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
