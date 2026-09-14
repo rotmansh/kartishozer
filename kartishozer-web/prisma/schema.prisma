@@ -1,0 +1,318 @@
+// ============================================================
+// KartisHozer — Phase 2 schema
+// Money is always stored in agorot (1 ILS = 100 agorot).
+// Field/relation names intentionally match what the existing
+// admin panel code (kartishozer-admin-panel) already expects,
+// so that panel can be wired to this same database.
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ── Users & vendors ─────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  fullName  String
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vendor       Vendor?
+  orders       Order[]
+  favorites    Favorite[]
+  disputesMade Dispute[] @relation("DisputeRequestedBy")
+}
+
+enum VerificationLevel {
+  NONE
+  BASIC
+  FULL
+}
+
+enum VendorStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model Vendor {
+  id                 String            @id @default(cuid())
+  userId             String            @unique
+  user               User              @relation(fields: [userId], references: [id])
+  displayName        String
+  isVerified         Boolean           @default(false)
+  verificationLevel  VerificationLevel @default(NONE)
+  status             VendorStatus      @default(ACTIVE)
+  bankAccountRef     String?
+  createdAt          DateTime          @default(now())
+
+  listings  Listing[]
+  orders    Order[]
+  payouts   Payout[]
+
+  @@index([status])
+}
+
+// ── Catalog ───────────────────────────────────────────────────
+
+enum CategorySlug {
+  concerts
+  standup
+  theater
+  sports
+  attractions
+  kids
+}
+
+model Venue {
+  id     String  @id @default(cuid())
+  nameHe String
+  city   String
+
+  events Event[]
+}
+
+model Event {
+  id            String       @id @default(cuid())
+  nameHe        String
+  category      CategorySlug
+  venueId       String
+  venue         Venue        @relation(fields: [venueId], references: [id])
+  startsAt      DateTime
+  descriptionHe String
+  gradientFrom  String
+  gradientTo    String
+  emoji         String
+  createdAt     DateTime     @default(now())
+
+  listings Listing[]
+  orders   Order[]
+
+  @@index([category])
+  @@index([startsAt])
+}
+
+// ── Listings & risk ───────────────────────────────────────────
+
+enum ListingStatus {
+  PENDING_REVIEW
+  ACTIVE
+  REJECTED
+  SUSPENDED
+  SOLD
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  BLOCKED
+}
+
+model Listing {
+  id                 String        @id @default(cuid())
+  eventId            String
+  event              Event         @relation(fields: [eventId], references: [id])
+  vendorId           String
+  vendor             Vendor        @relation(fields: [vendorId], references: [id])
+  status             ListingStatus @default(PENDING_REVIEW)
+  section            String?
+  quantity           Int
+  priceAgorot        Int
+  faceValueAgorot    Int
+  isSafePassExchange Boolean       @default(true)
+  note               String?
+  riskScore          Int           @default(0)
+  riskLevel          RiskLevel     @default(LOW)
+  createdAt          DateTime      @default(now())
+  deletedAt          DateTime?
+
+  riskAssessment ListingRisk?
+  orders         Order[]
+  favorites      Favorite[]
+
+  @@index([status])
+  @@index([eventId])
+  @@index([vendorId])
+  @@index([riskLevel])
+}
+
+model ListingRisk {
+  id                  String    @id @default(cuid())
+  listingId           String    @unique
+  listing             Listing   @relation(fields: [listingId], references: [id])
+  decision            String? // APPROVE | REJECT | REQUEST_INFO
+  totalScore          Int       @default(0)
+  duplicateBarcode    Boolean   @default(false)
+  duplicatePdfHash    Boolean   @default(false)
+  suspiciousFaceValue Boolean   @default(false)
+  highRiskAccount     Boolean   @default(false)
+  bulkListingFlag     Boolean   @default(false)
+  reviewedById        String?
+  reviewedAt          DateTime?
+  reviewNotes         String?
+}
+
+// ── Orders ────────────────────────────────────────────────────
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CONFIRMED
+  TICKET_DELIVERED
+  DISPUTED
+  PARTIALLY_REFUNDED
+  REFUNDED
+  CANCELLED
+}
+
+model Order {
+  id               String      @id @default(cuid())
+  listingId        String
+  listing          Listing     @relation(fields: [listingId], references: [id])
+  eventId          String
+  event            Event       @relation(fields: [eventId], references: [id])
+  buyerId          String
+  buyer            User        @relation(fields: [buyerId], references: [id])
+  vendorId         String
+  vendor           Vendor      @relation(fields: [vendorId], references: [id])
+  quantity         Int
+  priceAgorot      Int
+  buyerFeeAgorot   Int
+  totalAgorot      Int
+  status           OrderStatus @default(PENDING)
+  buyerName        String
+  buyerEmail       String
+  providerIntentId String?
+  paidAt           DateTime?
+  createdAt        DateTime    @default(now())
+
+  disputes      Dispute[]
+  payouts       Payout[]
+  ledgerEntries LedgerEntry[]
+
+  @@index([status])
+  @@index([buyerId])
+  @@index([vendorId])
+}
+
+// ── Disputes ──────────────────────────────────────────────────
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED_BUYER
+  RESOLVED_SELLER
+}
+
+model Dispute {
+  id            String        @id @default(cuid())
+  orderId       String
+  order         Order         @relation(fields: [orderId], references: [id])
+  type          String
+  reason        String
+  status        DisputeStatus @default(OPEN)
+  requestedById String
+  requestedBy   User          @relation("DisputeRequestedBy", fields: [requestedById], references: [id])
+  resolution    String?
+  resolvedById  String?
+  resolvedAt    DateTime?
+  createdAt     DateTime      @default(now())
+
+  @@index([status])
+}
+
+// ── Payouts ───────────────────────────────────────────────────
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  ON_HOLD
+  PAID
+  FAILED
+}
+
+enum PayoutTrigger {
+  AUTO
+  MANUAL
+}
+
+model Payout {
+  id            String        @id @default(cuid())
+  vendorId      String
+  vendor        Vendor        @relation(fields: [vendorId], references: [id])
+  orderId       String
+  order         Order         @relation(fields: [orderId], references: [id])
+  amountAgorot  Int
+  status        PayoutStatus  @default(PENDING)
+  trigger       PayoutTrigger @default(AUTO)
+  scheduledFor  DateTime?
+  processedAt   DateTime?
+  failureReason String?
+  createdAt     DateTime      @default(now())
+
+  @@index([status])
+}
+
+// ── Ledger (double-entry bookkeeping, agorot) ──────────────────
+
+enum LedgerEntryType {
+  PLATFORM_FEE_BUYER
+  SELLER_PROCEEDS
+  REFUND_BUYER
+}
+
+model LedgerEntry {
+  id             String          @id @default(cuid())
+  orderId        String
+  order          Order           @relation(fields: [orderId], references: [id])
+  type           LedgerEntryType
+  amountAgorot   Int
+  debitAccount   String
+  creditAccount  String
+  createdAt      DateTime        @default(now())
+}
+
+// ── Favorites ─────────────────────────────────────────────────
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
+}
+
+// ── Platform config & audit ────────────────────────────────────
+
+model PlatformConfig {
+  key         String   @id
+  value       String
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  action       String
+  resourceType String
+  resourceId   String
+  userId       String // real User.id, or "system" — not a FK, so log rows outlive deleted users
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+}

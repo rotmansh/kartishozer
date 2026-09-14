@@ -1,20 +1,19 @@
 import type { Metadata } from "next";
-import { LISTINGS, getListing } from "@/lib/mock/listings";
-import { getEvent } from "@/lib/mock/events";
+import { getListing, getEvent, computeOrderTotals } from "@/lib/queries/catalog";
 import { CheckoutClient } from "./CheckoutClient";
 
 type Props = { params: { listingId: string } };
 
-export function generateStaticParams() {
-  return LISTINGS.map((l) => ({ listingId: l.id }));
-}
-
-export function generateMetadata({ params }: Props): Metadata {
-  const listing = getListing(params.listingId);
-  const event = listing ? getEvent(listing.eventId) : undefined;
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const listing = await getListing(params.listingId);
+  const event = listing ? await getEvent(listing.eventId) : undefined;
   return { title: event ? `תשלום · ${event.nameHe} | כרטיס חוזר` : "כרטיס חוזר" };
 }
 
-export default function CheckoutPage({ params }: Props) {
-  return <CheckoutClient listingId={params.listingId} />;
+export default async function CheckoutPage({ params }: Props) {
+  const listing = await getListing(params.listingId);
+  const event = listing ? await getEvent(listing.eventId) : null;
+  const totals = listing ? await computeOrderTotals(listing.priceAgorot) : null;
+
+  return <CheckoutClient listing={listing} event={event} totals={totals} />;
 }

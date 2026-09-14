@@ -11,27 +11,32 @@ import {
   Calendar,
   MapPin,
 } from "lucide-react";
-import { getListing } from "@/lib/mock/listings";
-import { getEvent } from "@/lib/mock/events";
+import type { Listing, EventItem } from "@/lib/types";
 import { fmtAgorot, fmtDate, fmtTime } from "@/lib/format";
-import { computeOrderTotals } from "@/lib/data";
-import { getPaymentProvider } from "@/lib/payments/provider.factory";
+import { createOrderAction } from "@/lib/actions/orders.actions";
 import { TopBar } from "@/components/layout/TopBar";
 import { SellerBadge } from "@/components/SellerBadge";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 
 type PaymentMethod = "card" | "bit" | "apple_pay";
+type Totals = { priceAgorot: number; buyerFeeAgorot: number; totalAgorot: number };
 
-export function CheckoutClient({ listingId }: { listingId: string }) {
-  const listing = getListing(listingId);
-  const event = listing ? getEvent(listing.eventId) : undefined;
-
+export function CheckoutClient({
+  listing,
+  event,
+  totals,
+}: {
+  listing: Listing | null;
+  event: EventItem | null;
+  totals: Totals | null;
+}) {
   const [method, setMethod] = useState<PaymentMethod>("card");
   const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
-  if (!listing || !event) {
+  if (!listing || !event || !totals) {
     return (
       <div className="px-6 pt-16 text-center">
         <p className="font-black text-ink-900 mb-2">הכרטיס לא נמצא</p>
@@ -43,20 +48,15 @@ export function CheckoutClient({ listingId }: { listingId: string }) {
     );
   }
 
-  const totals = computeOrderTotals(listing.priceAgorot);
-
   async function handleConfirm() {
     setProcessing(true);
-    // Demo-only flow through the payment-provider abstraction — the mock
-    // provider never contacts a real processor or moves real money.
-    const provider = getPaymentProvider();
-    const intent = await provider.createIntent({
-      amountAgorot: totals.totalAgorot,
-      currency: "ILS",
-      metadata: { listingId: listing!.id, demo: "true" },
-    });
-    await provider.confirmIntent(intent.providerIntentId);
+    setError(null);
+    const result = await createOrderAction(listing!.id);
     setProcessing(false);
+    if ("error" in result) {
+      setError(result.error);
+      return;
+    }
     setDone(true);
   }
 
@@ -68,8 +68,8 @@ export function CheckoutClient({ listingId }: { listingId: string }) {
         </div>
         <h1 className="text-xl font-black text-ink-900">ההזמנה אושרה (דמו)</h1>
         <p className="text-sm text-ink-500 max-w-[34ch] leading-relaxed">
-          זו תצוגה מקדימה בלבד — לא בוצע חיוב אמיתי ולא הועבר כרטיס בפועל. בגרסה
-          הסופית, הכרטיס יועבר אליכם דיגיטלית ברגע שהתשלום מאובטח בנאמנות.
+          זו הדגמה של תהליך תשלום — לא בוצע חיוב אמיתי דרך ספק סליקה. ההזמנה
+          עצמה כן נשמרה במערכת ותוכלו לראות אותה בפרופיל שלכם.
         </p>
         <div className="w-full max-w-xs space-y-2.5 pt-2">
           <Link href="/profile">
@@ -170,10 +170,16 @@ export function CheckoutClient({ listingId }: { listingId: string }) {
         </div>
       </div>
 
+      {error && (
+        <div className="mx-4 mt-4 rounded-2xl bg-brand-50 text-brand-600 p-3.5 text-xs font-bold text-center">
+          {error}
+        </div>
+      )}
+
       <div className="mx-4 mt-4 flex items-start gap-2.5 rounded-2xl bg-ink-100 p-3.5">
         <ShieldCheck size={16} className="text-ink-500 flex-shrink-0 mt-0.5" />
         <p className="text-[11px] text-ink-700 leading-relaxed">
-          התשלום נשמר בנאמנות עד לאישור קבלת הכרטיס על ידכם. זהו מסך הדגמה —
+          התשלום נשמר בנאמנות עד לאישור קבלת הכרטיס. זהו מסך הדגמה —
           לא יבוצע חיוב אמיתי.
         </p>
       </div>

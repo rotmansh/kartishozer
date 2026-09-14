@@ -1,9 +1,8 @@
 import { MessageCircle, Clock } from "lucide-react";
-import { SELLERS } from "@/lib/mock/sellers";
 
 const PLACEHOLDER_THREADS = [
-  { seller: SELLERS[0], lastMessageHe: "היי! הכרטיסים עדיין זמינים 🙂", when: "אתמול" },
-  { seller: SELLERS[3], lastMessageHe: "מעולה, שולח את הכרטיס עכשיו דרך המערכת", when: "לפני יומיים" },
+  { seller: { displayName: "נועה כהן" }, lastMessageHe: "היי! הכרטיסים עדיין זמינים 🙂", when: "אתמול" },
+  { seller: { displayName: "דניאל אברהם" }, lastMessageHe: "מעולה, שולח את הכרטיס עכשיו דרך המערכת", when: "לפני יומיים" },
 ];
 
 export default function MessagesPage() {

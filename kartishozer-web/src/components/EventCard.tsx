@@ -3,12 +3,19 @@ import { MapPin, Calendar } from "lucide-react";
 import type { EventItem } from "@/lib/types";
 import { fmtDate } from "@/lib/format";
 import { fmtAgorot } from "@/lib/format";
-import { getMinPriceAgorot, getListingCount } from "@/lib/data";
 import { getCategory } from "@/lib/mock/categories";
 
-export function EventCard({ event, wide }: { event: EventItem; wide?: boolean }) {
-  const minPrice = getMinPriceAgorot(event.id);
-  const count = getListingCount(event.id);
+export function EventCard({
+  event,
+  wide,
+  minPriceAgorot: minPrice = null,
+  listingCount: count = 0,
+}: {
+  event: EventItem;
+  wide?: boolean;
+  minPriceAgorot?: number | null;
+  listingCount?: number;
+}) {
   const category = getCategory(event.category);
 
   return (

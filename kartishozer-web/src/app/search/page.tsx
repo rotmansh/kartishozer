@@ -1,34 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Search as SearchIcon, X, SlidersHorizontal } from "lucide-react";
 import { CATEGORIES } from "@/lib/mock/categories";
-import { searchEvents } from "@/lib/mock/events";
-import { getMinPriceAgorot } from "@/lib/data";
+import { searchCatalogAction, type SearchResultItem, type SearchSortKey } from "@/lib/actions/search.actions";
 import { EventCard } from "@/components/EventCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Chip } from "@/components/ui/Chip";
 import type { CategorySlug } from "@/lib/types";
 
-type SortKey = "date" | "price_asc" | "price_desc";
-
 export default function SearchPage() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<CategorySlug | null>(null);
-  const [sort, setSort] = useState<SortKey>("date");
+  const [sort, setSort] = useState<SearchSortKey>("date");
+  const [results, setResults] = useState<SearchResultItem[]>([]);
+  const [isPending, startTransition] = useTransition();
 
-  const results = useMemo(() => {
-    let items = searchEvents(query);
-    if (category) items = items.filter((e) => e.category === category);
-    if (sort === "date") {
-      items = [...items].sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
-    } else {
-      const price = (id: string) => getMinPriceAgorot(id) ?? Infinity;
-      items = [...items].sort((a, b) =>
-        sort === "price_asc" ? price(a.id) - price(b.id) : price(b.id) - price(a.id)
-      );
-    }
-    return items;
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      startTransition(async () => {
+        setResults(await searchCatalogAction({ query, category, sort }));
+      });
+    }, 150);
+    return () => clearTimeout(handle);
   }, [query, category, sort]);
 
   return (
@@ -69,7 +63,7 @@ export default function SearchPage() {
                 { key: "date", label: "התאריך הקרוב" },
                 { key: "price_asc", label: "מחיר: נמוך לגבוה" },
                 { key: "price_desc", label: "מחיר: גבוה לנמוך" },
-              ] as { key: SortKey; label: string }[]
+              ] as { key: SearchSortKey; label: string }[]
             ).map((opt) => (
               <button
                 key={opt.key}
@@ -86,7 +80,7 @@ export default function SearchPage() {
       </div>
 
       <div className="p-4">
-        {results.length === 0 ? (
+        {!isPending && results.length === 0 ? (
           <EmptyState
             icon={<SearchIcon size={26} />}
             title="לא נמצאו תוצאות"
@@ -95,8 +89,8 @@ export default function SearchPage() {
         ) : (
           <div className="space-y-3">
             <p className="text-xs text-ink-500 font-bold px-1">{results.length} אירועים נמצאו</p>
-            {results.map((e) => (
-              <EventCard key={e.id} event={e} />
+            {results.map(({ event, minPriceAgorot, listingCount }) => (
+              <EventCard key={event.id} event={event} minPriceAgorot={minPriceAgorot} listingCount={listingCount} />
             ))}
           </div>
         )}

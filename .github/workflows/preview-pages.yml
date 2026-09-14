@@ -1,17 +1,17 @@
 name: Phase 1 preview (GitHub Pages)
 
-# Deploys a static export of kartishozer-web to GitHub Pages so the
-# Phase 1 mobile UI can be previewed on a real phone via a public URL.
-# This is preview-only tooling — it does not affect the app itself
-# (next.config.js only switches to static export when GITHUB_PAGES=true).
+# Deployed the Phase 1 static mock-data build to GitHub Pages. Frozen
+# on purpose as of Phase 2: the app is now a real, per-user, database-
+# backed Next.js app (real auth, real listings/orders) that cannot be
+# meaningfully static-exported — there is no server to check who's
+# signed in or query the database once it's just static files. Phase 2
+# is previewed on Vercel instead. This workflow is kept, disarmed
+# (manual-only), purely so the live Phase 1 snapshot already published
+# at this Pages URL is never overwritten by an later, incompatible
+# build. Do not re-add a push trigger without re-checking that
+# assumption.
 
 on:
-  push:
-    branches:
-      - claude/kartishozer-repo-analysis-6mc06r
-    paths:
-      - "kartishozer-web/**"
-      - ".github/workflows/preview-pages.yml"
   workflow_dispatch: {}
 
 permissions:

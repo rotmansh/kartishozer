@@ -1,8 +1,15 @@
 import Link from "next/link";
 import { Search, MessageCircle, ShieldCheck, Zap, BadgeCheck, Music, Mic2, Drama, Trophy, FerrisWheel, PartyPopper } from "lucide-react";
 import { CATEGORIES } from "@/lib/mock/categories";
-import { getFeaturedEvents } from "@/lib/mock/events";
-import { getNewestListings } from "@/lib/mock/listings";
+import {
+  getFeaturedEvents,
+  getNewestListings,
+  getEvent,
+  getMinPriceAgorot,
+  getListingCount,
+} from "@/lib/queries/catalog";
+import { getAppUser } from "@/lib/auth/server";
+import { db } from "@/lib/db";
 import { EventCard } from "@/components/EventCard";
 import { ListingCard } from "@/components/ListingCard";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -16,9 +23,35 @@ const CATEGORY_ICONS = {
   PartyPopper,
 } as const;
 
-export default function HomePage() {
-  const featured = getFeaturedEvents();
-  const newest = getNewestListings(4);
+export default async function HomePage() {
+  const [featured, newest, user] = await Promise.all([
+    getFeaturedEvents(),
+    getNewestListings(4),
+    getAppUser(),
+  ]);
+
+  const featuredWithStats = await Promise.all(
+    featured.map(async (e) => ({
+      event: e,
+      minPriceAgorot: await getMinPriceAgorot(e.id),
+      listingCount: await getListingCount(e.id),
+    }))
+  );
+
+  const favoriteIds = user
+    ? new Set(
+        (
+          await db.favorite.findMany({
+            where: { userId: user.id, listingId: { in: newest.map((l) => l.id) } },
+            select: { listingId: true },
+          })
+        ).map((f) => f.listingId)
+      )
+    : new Set<string>();
+
+  const newestWithEvents = await Promise.all(
+    newest.map(async (l) => ({ listing: l, event: await getEvent(l.eventId) }))
+  );
 
   return (
     <div className="pb-4">
@@ -27,7 +60,9 @@ export default function HomePage() {
         <div className="flex items-center gap-2">
           <div className="h-9 w-9 rounded-2xl bg-brand flex items-center justify-center text-white font-black">כ</div>
           <div>
-            <p className="text-[11px] text-ink-500 leading-none">שלום 👋</p>
+            <p className="text-[11px] text-ink-500 leading-none">
+              {user ? `שלום, ${user.fullName.split(" ")[0]} 👋` : "שלום 👋"}
+            </p>
             <p className="text-sm font-black text-ink-900 leading-tight">כרטיס חוזר</p>
           </div>
         </div>
@@ -80,8 +115,8 @@ export default function HomePage() {
       <div className="mb-7">
         <SectionHeader title="אירועים מומלצים" href="/search" />
         <div className="flex gap-3 px-4 overflow-x-auto no-scrollbar pb-1">
-          {featured.map((e) => (
-            <EventCard key={e.id} event={e} wide />
+          {featuredWithStats.map(({ event, minPriceAgorot, listingCount }) => (
+            <EventCard key={event.id} event={event} wide minPriceAgorot={minPriceAgorot} listingCount={listingCount} />
           ))}
         </div>
       </div>
@@ -106,8 +141,14 @@ export default function HomePage() {
       <div>
         <SectionHeader title="עולו לאתר עכשיו" href="/search" />
         <div className="px-4 space-y-3">
-          {newest.map((l) => (
-            <ListingCard key={l.id} listing={l} />
+          {newestWithEvents.map(({ listing, event }) => (
+            <ListingCard
+              key={listing.id}
+              listing={listing}
+              event={event ?? undefined}
+              isFavorited={favoriteIds.has(listing.id)}
+              canFavorite={!!user}
+            />
           ))}
         </div>
       </div>

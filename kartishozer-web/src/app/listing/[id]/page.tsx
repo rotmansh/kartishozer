@@ -9,12 +9,10 @@ import {
   AlertTriangle,
   MessageCircle,
 } from "lucide-react";
-import { LISTINGS, getListing } from "@/lib/mock/listings";
-import { getEvent } from "@/lib/mock/events";
+import { getListing, getEvent, computeOrderTotals } from "@/lib/queries/catalog";
 import { getCategory } from "@/lib/mock/categories";
 import { fmtAgorot, fmtDate, fmtTime } from "@/lib/format";
 import { markupPercent } from "@/lib/types";
-import { computeOrderTotals } from "@/lib/data";
 import { TopBar } from "@/components/layout/TopBar";
 import { SellerBadge } from "@/components/SellerBadge";
 import { Badge } from "@/components/ui/Badge";
@@ -22,25 +20,21 @@ import { Button } from "@/components/ui/Button";
 
 type Props = { params: { id: string } };
 
-export function generateStaticParams() {
-  return LISTINGS.map((l) => ({ id: l.id }));
-}
-
-export function generateMetadata({ params }: Props): Metadata {
-  const listing = getListing(params.id);
-  const event = listing ? getEvent(listing.eventId) : undefined;
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const listing = await getListing(params.id);
+  const event = listing ? await getEvent(listing.eventId) : undefined;
   return { title: event ? `${event.nameHe} | כרטיס חוזר` : "כרטיס חוזר" };
 }
 
-export default function ListingDetailsPage({ params }: Props) {
-  const listing = getListing(params.id);
+export default async function ListingDetailsPage({ params }: Props) {
+  const listing = await getListing(params.id);
   if (!listing) notFound();
-  const event = getEvent(listing.eventId);
+  const event = await getEvent(listing.eventId);
   if (!event) notFound();
 
   const category = getCategory(event.category);
   const markup = markupPercent(listing.priceAgorot, listing.faceValueAgorot);
-  const totals = computeOrderTotals(listing.priceAgorot);
+  const totals = await computeOrderTotals(listing.priceAgorot);
 
   return (
     <div className="pb-28">

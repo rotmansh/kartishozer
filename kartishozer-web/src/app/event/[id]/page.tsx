@@ -2,9 +2,10 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Calendar, Clock, MapPin, Info, Ticket as TicketIcon } from "lucide-react";
-import { EVENTS, getEvent } from "@/lib/mock/events";
-import { getListingsByEvent } from "@/lib/mock/listings";
+import { getEvent, getListingsByEvent } from "@/lib/queries/catalog";
 import { getCategory } from "@/lib/mock/categories";
+import { getAppUser } from "@/lib/auth/server";
+import { db } from "@/lib/db";
 import { fmtDateLong, fmtTime } from "@/lib/format";
 import { TopBar } from "@/components/layout/TopBar";
 import { ListingCard } from "@/components/ListingCard";
@@ -13,21 +14,28 @@ import { Button } from "@/components/ui/Button";
 
 type Props = { params: { id: string } };
 
-export function generateStaticParams() {
-  return EVENTS.map((e) => ({ id: e.id }));
-}
-
-export function generateMetadata({ params }: Props): Metadata {
-  const event = getEvent(params.id);
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const event = await getEvent(params.id);
   return { title: event ? `${event.nameHe} | כרטיס חוזר` : "כרטיס חוזר" };
 }
 
-export default function EventDetailsPage({ params }: Props) {
-  const event = getEvent(params.id);
+export default async function EventDetailsPage({ params }: Props) {
+  const event = await getEvent(params.id);
   if (!event) notFound();
 
-  const listings = getListingsByEvent(event.id);
+  const [listings, user] = await Promise.all([getListingsByEvent(event.id), getAppUser()]);
   const category = getCategory(event.category);
+
+  const favoriteIds = user
+    ? new Set(
+        (
+          await db.favorite.findMany({
+            where: { userId: user.id, listingId: { in: listings.map((l) => l.id) } },
+            select: { listingId: true },
+          })
+        ).map((f) => f.listingId)
+      )
+    : new Set<string>();
 
   return (
     <div className="pb-6">
@@ -91,7 +99,13 @@ export default function EventDetailsPage({ params }: Props) {
           ) : (
             <div className="space-y-3">
               {listings.map((l) => (
-                <ListingCard key={l.id} listing={l} showEvent={false} />
+                <ListingCard
+                  key={l.id}
+                  listing={l}
+                  showEvent={false}
+                  isFavorited={favoriteIds.has(l.id)}
+                  canFavorite={!!user}
+                />
               ))}
             </div>
           )}

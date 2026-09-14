@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { CATEGORIES, getCategory } from "@/lib/mock/categories";
-import { getEventsByCategory } from "@/lib/mock/events";
+import { getCategory } from "@/lib/mock/categories";
+import { getEventsByCategory, getMinPriceAgorot, getListingCount } from "@/lib/queries/catalog";
 import { EventCard } from "@/components/EventCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TopBar } from "@/components/layout/TopBar";
@@ -9,20 +9,23 @@ import { CalendarX } from "lucide-react";
 
 type Props = { params: { slug: string } };
 
-export function generateStaticParams() {
-  return CATEGORIES.map((c) => ({ slug: c.slug }));
-}
-
 export function generateMetadata({ params }: Props): Metadata {
   const category = getCategory(params.slug);
   return { title: category ? `${category.labelHe} | כרטיס חוזר` : "כרטיס חוזר" };
 }
 
-export default function CategoryPage({ params }: Props) {
+export default async function CategoryPage({ params }: Props) {
   const category = getCategory(params.slug);
   if (!category) notFound();
 
-  const events = getEventsByCategory(category.slug);
+  const events = await getEventsByCategory(category.slug);
+  const eventsWithStats = await Promise.all(
+    events.map(async (e) => ({
+      event: e,
+      minPriceAgorot: await getMinPriceAgorot(e.id),
+      listingCount: await getListingCount(e.id),
+    }))
+  );
 
   return (
     <div>
@@ -44,7 +47,9 @@ export default function CategoryPage({ params }: Props) {
             subtitle="חזרו לבדוק בקרוב — אירועים חדשים מתווספים כל הזמן"
           />
         ) : (
-          events.map((e) => <EventCard key={e.id} event={e} />)
+          eventsWithStats.map(({ event, minPriceAgorot, listingCount }) => (
+            <EventCard key={event.id} event={event} minPriceAgorot={minPriceAgorot} listingCount={listingCount} />
+          ))
         )}
       </div>
     </div>

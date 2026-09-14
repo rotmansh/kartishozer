@@ -9,6 +9,12 @@ const NO_NAV_PREFIXES = ["/sign-in", "/sign-up", "/checkout"];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+
+  // The admin back-office is a separate, desktop-oriented tool with its
+  // own full-width layout — it must not be squeezed into the mobile
+  // consumer frame (or get the consumer bottom nav/banner).
+  if (pathname.startsWith("/admin")) return <>{children}</>;
+
   const hideNav = NO_NAV_PREFIXES.some((p) => pathname.startsWith(p));
 
   return (

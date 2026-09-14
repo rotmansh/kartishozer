@@ -1,35 +1,52 @@
 "use client";
 
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Heart, ShieldCheck, Ticket } from "lucide-react";
-import type { Listing } from "@/lib/types";
+import type { Listing, EventItem } from "@/lib/types";
 import { markupPercent } from "@/lib/types";
 import { fmtAgorot } from "@/lib/format";
 import { fmtDate } from "@/lib/format";
-import { getEvent } from "@/lib/mock/events";
 import { SellerBadge } from "@/components/SellerBadge";
-import { useFavorites } from "@/lib/favorites/favorites-context";
+import { toggleFavoriteAction } from "@/lib/actions/favorites.actions";
 import { cn } from "@/lib/cn";
 
 export function ListingCard({
   listing,
+  event,
   showEvent = true,
+  isFavorited = false,
+  canFavorite = false,
 }: {
   listing: Listing;
+  event?: EventItem;
   showEvent?: boolean;
+  isFavorited?: boolean;
+  canFavorite?: boolean;
 }) {
-  const { isFavorite, toggle } = useFavorites();
-  const event = getEvent(listing.eventId);
-  const fav = isFavorite(listing.id);
+  const router = useRouter();
+  const [fav, setFav] = useState(isFavorited);
+  const [, startTransition] = useTransition();
   const markup = markupPercent(listing.priceAgorot, listing.faceValueAgorot);
+
+  function handleToggleFavorite(e: React.MouseEvent) {
+    e.preventDefault();
+    if (!canFavorite) {
+      router.push("/sign-in?redirect=/favorites");
+      return;
+    }
+    setFav((v) => !v);
+    startTransition(async () => {
+      const result = await toggleFavoriteAction(listing.id);
+      if ("error" in result) setFav((v) => !v);
+    });
+  }
 
   return (
     <div className="relative bg-white rounded-3xl border border-ink-900/5 shadow-card p-4">
       <button
-        onClick={(e) => {
-          e.preventDefault();
-          toggle(listing.id);
-        }}
+        onClick={handleToggleFavorite}
         aria-label="הוסף למועדפים"
         className="tap absolute left-3 top-3 h-9 w-9 rounded-full bg-ink-50 flex items-center justify-center z-10"
       >

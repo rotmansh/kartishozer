@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -12,9 +12,11 @@ import {
   AlertTriangle,
   PartyPopper,
 } from "lucide-react";
-import { EVENTS, getEvent } from "@/lib/mock/events";
+import { searchEventsForSellAction } from "@/lib/actions/events.actions";
+import { createListingAction } from "@/lib/actions/listings.actions";
 import { fmtAgorot, fmtDate } from "@/lib/format";
 import { markupPercent } from "@/lib/types";
+import type { EventItem } from "@/lib/types";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
@@ -28,12 +30,15 @@ export function SellWizard() {
   const preselectedEventId = searchParams.get("eventId");
 
   const [step, setStep] = useState<Step>(1);
-  const [done, setDone] = useState(false);
+  const [result, setResult] = useState<{ status: "ACTIVE" | "PENDING_REVIEW" | "REJECTED"; listingId: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const [eventId, setEventId] = useState<string | null>(preselectedEventId);
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [eventQuery, setEventQuery] = useState("");
   const [manualEventName, setManualEventName] = useState("");
+  const [, startSearchTransition] = useTransition();
 
   const [quantity, setQuantity] = useState(2);
   const [section, setSection] = useState("");
@@ -42,12 +47,16 @@ export function SellWizard() {
   const [safePass, setSafePass] = useState(true);
   const [note, setNote] = useState("");
 
-  const selectedEvent = eventId ? getEvent(eventId) : undefined;
-
-  const filteredEvents = useMemo(() => {
-    const q = eventQuery.trim().toLowerCase();
-    if (!q) return EVENTS.slice(0, 6);
-    return EVENTS.filter((e) => e.nameHe.toLowerCase().includes(q)).slice(0, 8);
+  useEffect(() => {
+    startSearchTransition(async () => {
+      const found = await searchEventsForSellAction(eventQuery);
+      setEvents(found);
+      if (preselectedEventId && !selectedEvent) {
+        const match = found.find((e) => e.id === preselectedEventId);
+        if (match) setSelectedEvent(match);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventQuery]);
 
   const faceValueAgorot = Math.round(Number(faceValue || 0) * 100);
@@ -59,26 +68,42 @@ export function SellWizard() {
   const canContinueStep2 =
     quantity > 0 && faceValueAgorot > 0 && priceAgorot > 0 && !overMarkup;
 
-  function handlePublish() {
+  async function handlePublish() {
+    if (!selectedEvent) {
+      setSubmitError("כרגע ניתן לפרסם כרטיס רק לאירוע קיים ברשימה — תמיכה בהוספת אירועים חדשים תגיע בהמשך");
+      return;
+    }
     setSubmitting(true);
-    // No backend in Phase 1 — simulate the review-queue hand-off the
-    // admin panel already implements (new listings start PENDING_REVIEW).
-    setTimeout(() => {
-      setSubmitting(false);
-      setDone(true);
-    }, 700);
+    setSubmitError(null);
+    const res = await createListingAction({
+      eventId: selectedEvent.id,
+      section: section || undefined,
+      quantity,
+      faceValueAgorot,
+      priceAgorot,
+      isSafePassExchange: safePass,
+      note: note || undefined,
+    });
+    setSubmitting(false);
+    if ("error" in res) {
+      setSubmitError(res.error);
+      return;
+    }
+    // status isn't returned directly, but a fresh read isn't needed here —
+    // the confirmation screen already explains the review step regardless.
+    setResult({ status: "PENDING_REVIEW", listingId: res.listingId });
   }
 
-  if (done) {
+  if (result) {
     return (
       <div className="flex flex-col items-center justify-center text-center px-6 pt-24 pb-10 gap-4">
         <div className="h-20 w-20 rounded-full bg-accent-50 flex items-center justify-center">
           <PartyPopper size={34} className="text-accent-600" />
         </div>
-        <h1 className="text-xl font-black text-ink-900">הכרטיס נשלח לבדיקה!</h1>
+        <h1 className="text-xl font-black text-ink-900">הכרטיס פורסם!</h1>
         <p className="text-sm text-ink-500 max-w-[32ch] leading-relaxed">
-          זו תצוגה מקדימה בלבד — לא נוצר כרטיס אמיתי ולא בוצעה פרסום בפועל. בגרסה
-          הסופית, כרטיסים חדשים עוברים בדיקת אבטחה קצרה לפני שהם עולים לאתר.
+          הכרטיס נשמר במערכת. כרטיסים עם ציון סיכון נמוך עולים לאתר מיד;
+          כרטיסים שסומנו לבדיקה יעלו לאחר אישור מנהל/ת.
         </p>
         <div className="w-full max-w-xs space-y-2.5 pt-2">
           <Link href="/profile">
@@ -122,7 +147,7 @@ export function SellWizard() {
               value={eventQuery}
               onChange={(e) => {
                 setEventQuery(e.target.value);
-                setEventId(null);
+                setSelectedEvent(null);
               }}
               placeholder="שם ההופעה, ההצגה או האירוע…"
               className="flex-1 bg-transparent outline-none text-sm placeholder-ink-300 min-w-0"
@@ -130,16 +155,16 @@ export function SellWizard() {
           </div>
 
           <div className="space-y-2">
-            {filteredEvents.map((e) => (
+            {events.map((e) => (
               <button
                 key={e.id}
                 onClick={() => {
-                  setEventId(e.id);
+                  setSelectedEvent(e);
                   setManualEventName("");
                 }}
                 className={cn(
                   "tap w-full flex items-center gap-3 rounded-2xl border p-3 text-right",
-                  eventId === e.id ? "border-brand bg-brand-50" : "border-ink-900/10 bg-white"
+                  selectedEvent?.id === e.id ? "border-brand bg-brand-50" : "border-ink-900/10 bg-white"
                 )}
               >
                 <span className="text-2xl flex-shrink-0">{e.emoji}</span>
@@ -149,7 +174,7 @@ export function SellWizard() {
                     {fmtDate(e.startsAt)} · {e.venue.city}
                   </p>
                 </div>
-                {eventId === e.id && <CheckCircle2 size={20} className="text-brand flex-shrink-0" />}
+                {selectedEvent?.id === e.id && <CheckCircle2 size={20} className="text-brand flex-shrink-0" />}
               </button>
             ))}
           </div>
@@ -160,11 +185,16 @@ export function SellWizard() {
               value={manualEventName}
               onChange={(e) => {
                 setManualEventName(e.target.value);
-                setEventId(null);
+                setSelectedEvent(null);
               }}
               placeholder="הקלידו שם אירוע, מקום ותאריך"
               className="w-full rounded-2xl bg-white border border-ink-900/10 px-4 h-12 text-sm outline-none placeholder-ink-300"
             />
+            {manualEventName.trim().length > 2 && (
+              <p className="text-[11px] text-ink-400 mt-1.5">
+                תמיכה בהוספת אירועים חדשים תגיע בקרוב — כרגע אפשר לפרסם רק לאירוע קיים.
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -272,7 +302,7 @@ export function SellWizard() {
           </button>
 
           <div>
-            <label className="text-xs font-bold text-ink-500 block mb-2">הערה למוכר/ת הבאה/ות (אופציונלי)</label>
+            <label className="text-xs font-bold text-ink-500 block mb-2">הערה לקונה/ה (אופציונלי)</label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -288,7 +318,7 @@ export function SellWizard() {
         <div className="px-4 space-y-4">
           <div>
             <h2 className="text-lg font-black text-ink-900 mb-1">סקירה ופרסום</h2>
-            <p className="text-sm text-ink-500">בדקו שהכל נכון לפני שליחה לבדיקה</p>
+            <p className="text-sm text-ink-500">בדקו שהכל נכון לפני פרסום</p>
           </div>
 
           <div className="bg-white rounded-2xl border border-ink-900/5 shadow-card p-4 space-y-3">
@@ -303,9 +333,15 @@ export function SellWizard() {
             <Row label="העברה" value={safePass ? "דיגיטלית מאובטחת" : "תיאום ישיר מול הקונה"} />
           </div>
 
+          {submitError && (
+            <div className="rounded-2xl bg-brand-50 text-brand-600 p-3.5 text-xs font-bold text-center">
+              {submitError}
+            </div>
+          )}
+
           <div className="rounded-2xl bg-ink-100 p-3.5 text-xs text-ink-700 leading-relaxed">
-            לאחר השליחה, הכרטיס יעבור בדיקת אבטחה קצרה (זיהוי כרטיסים כפולים, מחיר
-            חשוד וכו&apos;) לפני שהוא יעלה לאתר — בדיוק כמו בלוח הבקרה הניהולי.
+            לאחר הפרסום, הכרטיס יעבור בדיקת אבטחה קצרה (מחיר חשוד, חשבון חדש,
+            ריבוי פרסומים) לפני שהוא עולה לאתר — בדיוק כמו בלוח הבקרה הניהולי.
           </div>
         </div>
       )}
@@ -328,7 +364,7 @@ export function SellWizard() {
           </Button>
         ) : (
           <Button size="lg" fullWidth disabled={submitting} onClick={handlePublish}>
-            {submitting ? "שולח…" : "שליחה לבדיקה"}
+            {submitting ? "מפרסם…" : "פרסום כרטיס"}
           </Button>
         )}
       </div>
