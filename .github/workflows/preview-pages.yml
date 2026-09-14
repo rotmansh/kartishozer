@@ -1,0 +1,65 @@
+name: Phase 1 preview (GitHub Pages)
+
+# Deploys a static export of kartishozer-web to GitHub Pages so the
+# Phase 1 mobile UI can be previewed on a real phone via a public URL.
+# This is preview-only tooling — it does not affect the app itself
+# (next.config.js only switches to static export when GITHUB_PAGES=true).
+
+on:
+  push:
+    branches:
+      - claude/kartishozer-repo-analysis-6mc06r
+    paths:
+      - "kartishozer-web/**"
+      - ".github/workflows/preview-pages.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: kartishozer-web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: kartishozer-web
+        run: npm ci
+
+      - name: Build static export
+        working-directory: kartishozer-web
+        run: npm run build
+        env:
+          GITHUB_PAGES: "true"
+
+      - name: Add .nojekyll
+        run: touch kartishozer-web/out/.nojekyll
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: kartishozer-web/out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
