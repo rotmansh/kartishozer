@@ -3,7 +3,7 @@ import { Heebo } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { heIL } from "@clerk/localizations";
-import { CLERK_ENABLED } from "@/lib/auth/config";
+import { CLERK_ENABLED, CLERK_PUBLISHABLE_KEY } from "@/lib/auth/config";
 import { AppShell } from "@/components/layout/AppShell";
 
 const heebo = Heebo({
@@ -99,7 +99,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   if (!CLERK_ENABLED) return <Shell>{children}</Shell>;
 
   return (
-    <ClerkProvider localization={heIL} appearance={clerkAppearance}>
+    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} localization={heIL} appearance={clerkAppearance}>
       <Shell>{children}</Shell>
     </ClerkProvider>
   );

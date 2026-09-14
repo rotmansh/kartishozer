@@ -1,6 +1,10 @@
-// Whether real Clerk auth is configured for this deployment. Both the
-// client bundle and the server need this, so it only reads the
-// NEXT_PUBLIC_ variable (inlined at build time) — the app treats "have a
-// publishable key" as "Clerk is on" and expects CLERK_SECRET_KEY to be
-// set alongside it in every real deployment.
-export const CLERK_ENABLED = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+// Trimmed defensively: a stray trailing newline/space from copy-pasting a
+// key into Vercel's environment variable UI is enough to fail Clerk's own
+// strict key-format validation (@clerk/shared's parsePublishableKey),
+// which throws synchronously — exactly the kind of bug that only shows up
+// in production and crashes the whole request. Every Clerk touchpoint
+// (middleware, ClerkProvider) uses this constant instead of reading
+// process.env directly, so there is exactly one place this can go wrong.
+export const CLERK_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() || undefined;
+
+export const CLERK_ENABLED = Boolean(CLERK_PUBLISHABLE_KEY);
