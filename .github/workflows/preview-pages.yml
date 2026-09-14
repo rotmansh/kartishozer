@@ -59,9 +59,10 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    # No `environment:` block here on purpose: GitHub's auto-created
+    # "github-pages" environment defaults to a branch protection rule
+    # that only allows deploys from the default branch, which silently
+    # blocks this preview branch. deploy-pages works fine without it.
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
