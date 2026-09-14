@@ -11,7 +11,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@clerk/localizations": "^4.16.1",
+    "@clerk/localizations": "3.37.8",
     "@clerk/nextjs": "6.39.6",
     "@prisma/client": "6.19.3",
     "clsx": "2.1.1",
