@@ -65,9 +65,18 @@ export async function getEvent(id: string): Promise<EventItem | null> {
   return event ? toEventItem(event) : null;
 }
 
+// Every event a buyer can actually browse to must have something to buy —
+// otherwise a listing that gets sold or delisted leaves its event behind
+// as a ghost card (no price, no ticket count, nothing to do there). This
+// is the shared condition every public browse query filters on; it's
+// deliberately NOT used by the sell flow's own event search/dedup checks
+// (searchEventsForSellAction, findSimilarEventsAction), which need to
+// find an event specifically when it has no listings yet.
+export const hasActiveListing = { listings: { some: { status: "ACTIVE" as const, deletedAt: null } } };
+
 export async function getEventsByCategory(slug: string): Promise<EventItem[]> {
   const events = await db.event.findMany({
-    where: { category: slug as CategorySlug, startsAt: { gte: new Date() } },
+    where: { category: slug as CategorySlug, startsAt: { gte: new Date() }, ...hasActiveListing },
     include: { venue: true },
     orderBy: { startsAt: "asc" },
   });
@@ -76,7 +85,7 @@ export async function getEventsByCategory(slug: string): Promise<EventItem[]> {
 
 export async function getFeaturedEvents(): Promise<EventItem[]> {
   const events = await db.event.findMany({
-    where: { startsAt: { gte: new Date() } },
+    where: { startsAt: { gte: new Date() }, ...hasActiveListing },
     include: { venue: true },
     orderBy: { startsAt: "asc" },
     take: 5,

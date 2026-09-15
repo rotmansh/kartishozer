@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { getMinPriceAgorot, getListingCount, getSoleActiveListingId } from "@/lib/queries/catalog";
+import { getMinPriceAgorot, getListingCount, getSoleActiveListingId, hasActiveListing } from "@/lib/queries/catalog";
 import { getAppUser } from "@/lib/auth/server";
 import type { EventItem, CategorySlug } from "@/lib/types";
 
@@ -54,6 +54,7 @@ export async function searchCatalogAction(input: {
     db.event.findMany({
       where: {
         startsAt: whenBounds ?? { gte: new Date() },
+        ...hasActiveListing,
         ...(input.category ? { category: input.category } : {}),
         ...(q
           ? {
