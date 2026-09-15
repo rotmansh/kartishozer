@@ -158,6 +158,16 @@ export default async function HomePage() {
           ))}
         </div>
       </div>
+
+      <div className="flex items-center justify-center gap-3 px-4 py-6 text-[11px] text-ink-300">
+        <Link href="/terms" className="hover:text-ink-500">
+          תנאי שימוש
+        </Link>
+        <span>·</span>
+        <Link href="/privacy" className="hover:text-ink-500">
+          מדיניות פרטיות
+        </Link>
+      </div>
     </div>
   );
 }
