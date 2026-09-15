@@ -52,42 +52,9 @@ const clerkAppearance = {
   },
 };
 
-// TEMPORARY diagnostic script — runs before any other client JS, so it
-// catches crashes even if they happen before React attaches its own
-// error boundaries (global-error.tsx/error.tsx only catch render-time
-// throws). Writes the real error text into a full-screen overlay via
-// plain DOM APIs, no React needed. Safe to remove once the live crash
-// is diagnosed; does not touch auth, data, or business logic.
-const DIAGNOSTIC_SCRIPT = `
-(function () {
-  function show(msg) {
-    try {
-      var el = document.getElementById('__diag_overlay');
-      if (!el) {
-        el = document.createElement('div');
-        el.id = '__diag_overlay';
-        el.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#1E1917;color:#fff;padding:16px;font-family:monospace;font-size:12px;white-space:pre-wrap;overflow:auto;direction:ltr;text-align:left;';
-        (document.body || document.documentElement).appendChild(el);
-      }
-      el.textContent += msg + '\\n\\n';
-    } catch (e) {}
-  }
-  window.addEventListener('error', function (e) {
-    show('window.onerror: ' + (e.message || '') + '\\n' + ((e.error && e.error.stack) || ''));
-  });
-  window.addEventListener('unhandledrejection', function (e) {
-    var r = e.reason;
-    show('unhandledrejection: ' + ((r && r.message) || r) + '\\n' + ((r && r.stack) || ''));
-  });
-})();
-`;
-
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="he" dir="rtl" className={heebo.variable}>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: DIAGNOSTIC_SCRIPT }} />
-      </head>
       <body className="font-sans antialiased">
         <AppShell>{children}</AppShell>
       </body>

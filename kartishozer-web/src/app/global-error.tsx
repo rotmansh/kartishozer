@@ -1,68 +1,81 @@
 "use client";
 
-// ============================================================
-// TEMPORARY diagnostic boundary — not part of the approved design.
-// Next.js's default "Application error: a client-side exception has
-// occurred" screen hides the real message/stack in production. This
-// replaces that screen with the actual error so it can be read on a
-// phone with no DevTools access. Safe to remove once the live crash
-// is identified and fixed — catches only the render path itself, does
-// not touch auth, data, or any business logic.
-// ============================================================
+import { useEffect } from "react";
 
+// Root-layout error boundary — Next only renders this (instead of
+// error.tsx) when the root layout itself fails, so it renders a full
+// <html>/<body> with inline styles rather than relying on Tailwind
+// classes/globals.css, which the crashed layout may not have applied.
+// The real error still goes to the server console via console.error
+// (visible in Vercel's Runtime Logs) — this only changes what a visitor
+// sees on their own screen, from a raw stack trace to a plain message.
 export default function GlobalError({
   error,
+  reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    console.error("[global error boundary]", error);
+  }, [error]);
+
   return (
     <html lang="he" dir="rtl">
       <body
         style={{
           margin: 0,
-          padding: 16,
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 12,
+          padding: 32,
+          textAlign: "center",
           fontFamily: "system-ui, -apple-system, sans-serif",
-          background: "#1E1917",
-          color: "#fff",
-          direction: "ltr",
-          textAlign: "left",
+          background: "#FAF7F5",
+          color: "#1E1917",
         }}
       >
-        <h1 style={{ color: "#E8503A", fontSize: 18, marginBottom: 8 }}>
-          Diagnostic: client-side exception caught
-        </h1>
-        <p style={{ fontSize: 13, opacity: 0.8, marginBottom: 12 }}>
-          This is a temporary diagnostic screen, not the real app UI.
+        <p style={{ fontWeight: 900, fontSize: 16 }}>משהו השתבש</p>
+        <p style={{ fontSize: 14, color: "#786D68", maxWidth: "26ch" }}>
+          אנחנו כבר יודעים על זה. אפשר לנסות שוב, או לחזור לדף הבית.
         </p>
-        <div style={{ background: "#00000040", borderRadius: 8, padding: 12, marginBottom: 12 }}>
-          <p style={{ fontSize: 12, opacity: 0.6, margin: 0 }}>name</p>
-          <p style={{ fontSize: 14, margin: "2px 0 10px", wordBreak: "break-word" }}>{error.name}</p>
-          <p style={{ fontSize: 12, opacity: 0.6, margin: 0 }}>message</p>
-          <p style={{ fontSize: 14, margin: "2px 0 10px", wordBreak: "break-word" }}>{error.message}</p>
-          {error.digest && (
-            <>
-              <p style={{ fontSize: 12, opacity: 0.6, margin: 0 }}>digest</p>
-              <p style={{ fontSize: 14, margin: "2px 0 10px" }}>{error.digest}</p>
-            </>
-          )}
-        </div>
-        {error.stack && (
-          <pre
+        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <button
+            onClick={() => reset()}
             style={{
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-              fontSize: 11,
-              background: "#00000040",
-              padding: 12,
-              borderRadius: 8,
-              maxHeight: "50vh",
-              overflow: "auto",
+              height: 44,
+              padding: "0 20px",
+              borderRadius: 16,
+              border: "none",
+              background: "#E8503A",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 14,
             }}
           >
-            {error.stack}
-          </pre>
-        )}
+            נסו שוב
+          </button>
+          <a
+            href="/"
+            style={{
+              height: 44,
+              padding: "0 20px",
+              display: "inline-flex",
+              alignItems: "center",
+              borderRadius: 16,
+              border: "2px solid rgba(30,25,23,0.1)",
+              color: "#1E1917",
+              fontWeight: 700,
+              fontSize: 14,
+              textDecoration: "none",
+            }}
+          >
+            חזרה לדף הבית
+          </a>
+        </div>
       </body>
     </html>
   );

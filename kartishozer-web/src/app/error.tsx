@@ -1,60 +1,42 @@
 "use client";
 
-// TEMPORARY diagnostic boundary — see global-error.tsx for context.
-// This one catches errors below the root layout (i.e. everywhere
-// global-error.tsx would NOT catch, since Next only uses global-error
-// for failures in the root layout itself).
+import { useEffect } from "react";
+import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
+// Route-level error boundary — catches a render-time throw anywhere below
+// the root layout. The real error (message/stack/digest) always goes to
+// the server console via console.error here (visible in Vercel's Runtime
+// Logs), so nothing about diagnosing a real failure is lost; what changed
+// is that a signed-in visitor no longer sees that raw text on their own
+// screen — a plain, friendly message replaces it.
 export default function RouteError({
   error,
+  reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    console.error("[route error boundary]", error);
+  }, [error]);
+
   return (
-    <div
-      style={{
-        margin: 0,
-        padding: 16,
-        fontFamily: "system-ui, -apple-system, sans-serif",
-        background: "#1E1917",
-        color: "#fff",
-        direction: "ltr",
-        textAlign: "left",
-        minHeight: "100vh",
-      }}
-    >
-      <h1 style={{ color: "#E8503A", fontSize: 18, marginBottom: 8 }}>
-        Diagnostic: client-side exception caught (route level)
-      </h1>
-      <div style={{ background: "#00000040", borderRadius: 8, padding: 12, marginBottom: 12 }}>
-        <p style={{ fontSize: 12, opacity: 0.6, margin: 0 }}>name</p>
-        <p style={{ fontSize: 14, margin: "2px 0 10px", wordBreak: "break-word" }}>{error.name}</p>
-        <p style={{ fontSize: 12, opacity: 0.6, margin: 0 }}>message</p>
-        <p style={{ fontSize: 14, margin: "2px 0 10px", wordBreak: "break-word" }}>{error.message}</p>
-        {error.digest && (
-          <>
-            <p style={{ fontSize: 12, opacity: 0.6, margin: 0 }}>digest</p>
-            <p style={{ fontSize: 14, margin: "2px 0 10px" }}>{error.digest}</p>
-          </>
-        )}
+    <div className="min-h-screen flex flex-col items-center justify-center text-center px-8 gap-3">
+      <div className="h-16 w-16 rounded-full bg-ink-100 flex items-center justify-center text-brand">
+        <AlertTriangle size={26} />
       </div>
-      {error.stack && (
-        <pre
-          style={{
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-            fontSize: 11,
-            background: "#00000040",
-            padding: 12,
-            borderRadius: 8,
-            maxHeight: "50vh",
-            overflow: "auto",
-          }}
-        >
-          {error.stack}
-        </pre>
-      )}
+      <p className="font-black text-ink-900">משהו השתבש</p>
+      <p className="text-sm text-ink-500 max-w-[26ch]">
+        אנחנו כבר יודעים על זה. אפשר לנסות שוב, או לחזור לדף הבית.
+      </p>
+      <div className="flex items-center gap-2 mt-2">
+        <Button onClick={() => reset()}>נסו שוב</Button>
+        <Link href="/">
+          <Button variant="outline">חזרה לדף הבית</Button>
+        </Link>
+      </div>
     </div>
   );
 }
