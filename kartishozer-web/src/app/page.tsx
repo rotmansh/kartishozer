@@ -1,6 +1,24 @@
 import Link from "next/link";
-import { Search, MessageCircle, ShieldCheck, Zap, BadgeCheck, Music, Mic2, Drama, Trophy, FerrisWheel, PartyPopper } from "lucide-react";
+import {
+  Search,
+  MessageCircle,
+  ShieldCheck,
+  Zap,
+  BadgeCheck,
+  Music,
+  Mic2,
+  Drama,
+  Trophy,
+  FerrisWheel,
+  PartyPopper,
+  Calendar,
+  CalendarClock,
+  CalendarRange,
+  CalendarDays,
+  type LucideIcon,
+} from "lucide-react";
 import { CATEGORIES } from "@/lib/mock/categories";
+import type { WhenFilter } from "@/lib/actions/search.actions";
 import {
   getFeaturedEvents,
   getNewestListings,
@@ -22,6 +40,26 @@ const CATEGORY_ICONS = {
   FerrisWheel,
   PartyPopper,
 } as const;
+
+// Softer, single-tone colors for the flatter homepage tiles — deliberately
+// separate from CATEGORIES' own bold two-tone gradients (still used for
+// the category page hero etc.), which is exactly the "too bold" look this
+// redesign moves away from on the homepage specifically.
+const CATEGORY_SOFT_COLOR: Record<string, string> = {
+  concerts: "#E37B67",
+  standup: "#9B87D9",
+  theater: "#4FBBAE",
+  sports: "#5B93D9",
+  attractions: "#E5A94A",
+  kids: "#E285AC",
+};
+
+const WHEN_TILES: { key: WhenFilter; label: string; icon: LucideIcon; color: string }[] = [
+  { key: "today", label: "היום", icon: Calendar, color: "#5B93D9" },
+  { key: "tomorrow", label: "מחר", icon: CalendarClock, color: "#E5A94A" },
+  { key: "week", label: "השבוע הקרוב", icon: CalendarRange, color: "#4FBBAE" },
+  { key: "month", label: "החודש הקרוב", icon: CalendarDays, color: "#E37B67" },
+];
 
 export default async function HomePage() {
   const [featured, newest, user] = await Promise.all([
@@ -86,25 +124,47 @@ export default async function HomePage() {
         </Link>
       </div>
 
+      {/* Quick date filters */}
+      <div className="mb-6">
+        <SectionHeader title="מצאו את האירוע הבא" />
+        <div className="grid grid-cols-2 gap-3 px-4">
+          {WHEN_TILES.map((tile) => (
+            <Link
+              key={tile.key}
+              href={`/search?when=${tile.key}`}
+              className="tap flex items-center justify-between gap-2 rounded-2xl bg-ink-50 border border-ink-900/5 px-4 py-3.5"
+            >
+              <span className="text-[13px] font-bold text-ink-900">{tile.label}</span>
+              <div
+                className="h-9 w-9 rounded-xl bg-white flex items-center justify-center flex-shrink-0 shadow-card"
+                style={{ color: tile.color }}
+              >
+                <tile.icon size={18} />
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
       {/* Categories */}
       <div className="mb-6">
         <SectionHeader title="קטגוריות" />
-        <div className="flex gap-3 px-4 overflow-x-auto no-scrollbar pb-1">
+        <div className="grid grid-cols-2 gap-3 px-4">
           {CATEGORIES.map((cat) => {
             const Icon = CATEGORY_ICONS[cat.icon as keyof typeof CATEGORY_ICONS];
             return (
               <Link
                 key={cat.slug}
                 href={`/category/${cat.slug}`}
-                className="tap flex-shrink-0 w-[76px] flex flex-col items-center gap-1.5"
+                className="tap flex items-center justify-between gap-2 rounded-2xl bg-ink-50 border border-ink-900/5 px-4 py-3.5"
               >
+                <span className="text-[13px] font-bold text-ink-900">{cat.labelHe}</span>
                 <div
-                  className="h-14 w-14 rounded-2xl flex items-center justify-center text-white shadow-card"
-                  style={{ background: `linear-gradient(135deg, ${cat.gradient[0]}, ${cat.gradient[1]})` }}
+                  className="h-9 w-9 rounded-xl bg-white flex items-center justify-center flex-shrink-0 shadow-card"
+                  style={{ color: CATEGORY_SOFT_COLOR[cat.slug] }}
                 >
-                  <Icon size={24} />
+                  <Icon size={18} />
                 </div>
-                <span className="text-[11px] font-bold text-ink-700 text-center leading-tight">{cat.labelHe}</span>
               </Link>
             );
           })}

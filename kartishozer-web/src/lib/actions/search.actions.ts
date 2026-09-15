@@ -5,6 +5,7 @@ import { getMinPriceAgorot, getListingCount } from "@/lib/queries/catalog";
 import type { EventItem, CategorySlug } from "@/lib/types";
 
 export type SearchSortKey = "date" | "price_asc" | "price_desc";
+export type WhenFilter = "today" | "tomorrow" | "week" | "month";
 
 export type SearchResultItem = {
   event: EventItem;
@@ -12,16 +13,38 @@ export type SearchResultItem = {
   listingCount: number;
 };
 
+// Calendar-day boundaries (server local time — close enough for a quick
+// "today/tomorrow" filter; not worth the added complexity of tracking the
+// viewer's own timezone for this).
+function whenRange(when: WhenFilter): { gte: Date; lt: Date } {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfTomorrow = new Date(startOfToday.getTime() + 24 * 3600 * 1000);
+
+  switch (when) {
+    case "today":
+      return { gte: now, lt: startOfTomorrow };
+    case "tomorrow":
+      return { gte: startOfTomorrow, lt: new Date(startOfTomorrow.getTime() + 24 * 3600 * 1000) };
+    case "week":
+      return { gte: now, lt: new Date(now.getTime() + 7 * 24 * 3600 * 1000) };
+    case "month":
+      return { gte: now, lt: new Date(now.getTime() + 30 * 24 * 3600 * 1000) };
+  }
+}
+
 export async function searchCatalogAction(input: {
   query: string;
   category: CategorySlug | null;
   sort: SearchSortKey;
+  when?: WhenFilter | null;
 }): Promise<SearchResultItem[]> {
   const q = input.query.trim();
+  const whenBounds = input.when ? whenRange(input.when) : null;
 
   const events = await db.event.findMany({
     where: {
-      startsAt: { gte: new Date() },
+      startsAt: whenBounds ?? { gte: new Date() },
       ...(input.category ? { category: input.category } : {}),
       ...(q
         ? {
