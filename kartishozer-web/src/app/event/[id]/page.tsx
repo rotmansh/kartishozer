@@ -11,6 +11,7 @@ import { TopBar } from "@/components/layout/TopBar";
 import { ListingCard } from "@/components/ListingCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
+import { CategoryArt } from "@/components/CategoryArt";
 
 type Props = { params: { id: string } };
 
@@ -42,16 +43,17 @@ export default async function EventDetailsPage({ params }: Props) {
       <TopBar transparent />
 
       <div
-        className="-mt-14 pt-14 pb-8 px-4 text-white relative"
+        className="-mt-14 pt-14 pb-8 px-4 text-white relative overflow-hidden"
         style={{ background: `linear-gradient(135deg, ${event.gradient[0]}, ${event.gradient[1]})` }}
       >
-        <span className="text-5xl block mb-2">{event.emoji}</span>
+        <CategoryArt category={event.category} />
+        <span className="relative text-4xl block mb-2">{event.emoji}</span>
         {category && (
-          <span className="inline-block rounded-full bg-black/20 backdrop-blur px-2.5 py-1 text-[11px] font-bold mb-2">
+          <span className="relative inline-block rounded-full bg-black/20 backdrop-blur px-2.5 py-1 text-[11px] font-bold mb-2">
             {category.labelHe}
           </span>
         )}
-        <h1 className="text-xl font-black leading-snug">{event.nameHe}</h1>
+        <h1 className="relative text-xl font-black leading-snug">{event.nameHe}</h1>
       </div>
 
       <div className="px-4 -mt-4">
