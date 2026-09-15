@@ -18,6 +18,7 @@ export function EventCard({
   listingCount: count = 0,
   isFavorited = false,
   canFavorite = false,
+  soleListingId = null,
 }: {
   event: EventItem;
   wide?: boolean;
@@ -25,6 +26,9 @@ export function EventCard({
   listingCount?: number;
   isFavorited?: boolean;
   canFavorite?: boolean;
+  // When the event has exactly one active listing, skip the event page
+  // (built for comparing multiple sellers) and link straight to it.
+  soleListingId?: string | null;
 }) {
   const router = useRouter();
   const category = getCategory(event.category);
@@ -46,7 +50,7 @@ export function EventCard({
 
   return (
     <Link
-      href={`/event/${event.id}`}
+      href={soleListingId ? `/listing/${soleListingId}` : `/event/${event.id}`}
       className={`tap flex-shrink-0 block bg-white rounded-3xl overflow-hidden shadow-card border border-ink-900/5 ${
         wide ? "w-[78vw] max-w-[300px]" : "w-full"
       }`}

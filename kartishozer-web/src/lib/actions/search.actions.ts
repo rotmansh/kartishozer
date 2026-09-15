@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { getMinPriceAgorot, getListingCount } from "@/lib/queries/catalog";
+import { getMinPriceAgorot, getListingCount, getSoleActiveListingId } from "@/lib/queries/catalog";
 import { getAppUser } from "@/lib/auth/server";
 import type { EventItem, CategorySlug } from "@/lib/types";
 
@@ -13,6 +13,7 @@ export type SearchResultItem = {
   minPriceAgorot: number | null;
   listingCount: number;
   isFavorited: boolean;
+  soleListingId: string | null;
 };
 
 export type SearchCatalogResult = {
@@ -96,6 +97,7 @@ export async function searchCatalogAction(input: {
       minPriceAgorot: await getMinPriceAgorot(event.id),
       listingCount: await getListingCount(event.id),
       isFavorited: favoriteEventIds.has(event.id),
+      soleListingId: await getSoleActiveListingId(event.id),
     }))
   );
 

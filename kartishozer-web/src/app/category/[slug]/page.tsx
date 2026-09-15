@@ -1,7 +1,12 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getCategory } from "@/lib/mock/categories";
-import { getEventsByCategory, getMinPriceAgorot, getListingCount } from "@/lib/queries/catalog";
+import {
+  getEventsByCategory,
+  getMinPriceAgorot,
+  getListingCount,
+  getSoleActiveListingId,
+} from "@/lib/queries/catalog";
 import { getAppUser } from "@/lib/auth/server";
 import { db } from "@/lib/db";
 import { EventCard } from "@/components/EventCard";
@@ -26,6 +31,7 @@ export default async function CategoryPage({ params }: Props) {
       event: e,
       minPriceAgorot: await getMinPriceAgorot(e.id),
       listingCount: await getListingCount(e.id),
+      soleListingId: await getSoleActiveListingId(e.id),
     }))
   );
 
@@ -60,7 +66,7 @@ export default async function CategoryPage({ params }: Props) {
             subtitle="חזרו לבדוק בקרוב — אירועים חדשים מתווספים כל הזמן"
           />
         ) : (
-          eventsWithStats.map(({ event, minPriceAgorot, listingCount }) => (
+          eventsWithStats.map(({ event, minPriceAgorot, listingCount, soleListingId }) => (
             <EventCard
               key={event.id}
               event={event}
@@ -68,6 +74,7 @@ export default async function CategoryPage({ params }: Props) {
               listingCount={listingCount}
               isFavorited={eventFavoriteIds.has(event.id)}
               canFavorite={!!user}
+              soleListingId={soleListingId}
             />
           ))
         )}

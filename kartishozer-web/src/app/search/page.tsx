@@ -134,7 +134,7 @@ export default function SearchPage() {
         ) : (
           <div className="space-y-3">
             <p className="text-xs text-ink-500 font-bold px-1">{results.length} אירועים נמצאו</p>
-            {results.map(({ event, minPriceAgorot, listingCount, isFavorited }) => (
+            {results.map(({ event, minPriceAgorot, listingCount, isFavorited, soleListingId }) => (
               <EventCard
                 key={event.id}
                 event={event}
@@ -142,6 +142,7 @@ export default function SearchPage() {
                 listingCount={listingCount}
                 isFavorited={isFavorited}
                 canFavorite={canFavorite}
+                soleListingId={soleListingId}
               />
             ))}
           </div>

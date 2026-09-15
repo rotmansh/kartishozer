@@ -82,10 +82,12 @@ export default async function EventDetailsPage({ params }: Props) {
           </div>
         </div>
 
-        <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-ink-100 p-3.5">
-          <Info size={16} className="text-ink-500 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-ink-700 leading-relaxed">{event.descriptionHe}</p>
-        </div>
+        {event.descriptionHe && (
+          <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-ink-100 p-3.5">
+            <Info size={16} className="text-ink-500 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-ink-700 leading-relaxed">{event.descriptionHe}</p>
+          </div>
+        )}
 
         <div className="mt-7">
           <div className="flex items-center justify-between mb-3">

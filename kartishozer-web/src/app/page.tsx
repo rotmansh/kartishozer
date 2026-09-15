@@ -25,6 +25,7 @@ import {
   getEvent,
   getMinPriceAgorot,
   getListingCount,
+  getSoleActiveListingId,
 } from "@/lib/queries/catalog";
 import { getAppUser } from "@/lib/auth/server";
 import { db } from "@/lib/db";
@@ -73,6 +74,7 @@ export default async function HomePage() {
       event: e,
       minPriceAgorot: await getMinPriceAgorot(e.id),
       listingCount: await getListingCount(e.id),
+      soleListingId: await getSoleActiveListingId(e.id),
     }))
   );
 
@@ -176,7 +178,7 @@ export default async function HomePage() {
       <div className="mb-7">
         <SectionHeader title="אירועים מומלצים" href="/search" />
         <div className="flex gap-3 px-4 overflow-x-auto no-scrollbar pb-1">
-          {featuredWithStats.map(({ event, minPriceAgorot, listingCount }) => (
+          {featuredWithStats.map(({ event, minPriceAgorot, listingCount, soleListingId }) => (
             <EventCard
               key={event.id}
               event={event}
@@ -185,6 +187,7 @@ export default async function HomePage() {
               listingCount={listingCount}
               isFavorited={eventFavoriteIds.has(event.id)}
               canFavorite={!!user}
+              soleListingId={soleListingId}
             />
           ))}
         </div>

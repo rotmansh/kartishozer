@@ -149,6 +149,23 @@ export async function getListingCount(eventId: string): Promise<number> {
   return db.listing.count({ where: { eventId, status: "ACTIVE", deletedAt: null } });
 }
 
+/**
+ * When an event has exactly one active listing, the event page (built to
+ * let buyers compare multiple sellers) is a pointless extra tap between
+ * the event card and the one listing it would show anyway — so callers
+ * use this to link straight to that listing instead. Returns null both
+ * when there are zero listings and when there's more than one, since
+ * either way the event page is where the visitor actually needs to land.
+ */
+export async function getSoleActiveListingId(eventId: string): Promise<string | null> {
+  const listings = await db.listing.findMany({
+    where: { eventId, status: "ACTIVE", deletedAt: null },
+    select: { id: true },
+    take: 2,
+  });
+  return listings.length === 1 ? listings[0].id : null;
+}
+
 export async function getPlatformFees(): Promise<{ buyerFeePercent: number; sellerFeePercent: number }> {
   const rows = await db.platformConfig.findMany({
     where: { key: { in: ["buyer_fee_percent", "seller_fee_percent"] } },

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Heart } from "lucide-react";
 import { getAppUser } from "@/lib/auth/server";
 import { db } from "@/lib/db";
-import { getEvent, getMinPriceAgorot, getListingCount } from "@/lib/queries/catalog";
+import { getEvent, getMinPriceAgorot, getListingCount, getSoleActiveListingId } from "@/lib/queries/catalog";
 import { ListingCard } from "@/components/ListingCard";
 import { EventCard } from "@/components/EventCard";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -44,6 +44,7 @@ export default async function FavoritesPage() {
       },
       minPriceAgorot: await getMinPriceAgorot(event.id),
       listingCount: await getListingCount(event.id),
+      soleListingId: await getSoleActiveListingId(event.id),
     }))
   );
 
@@ -100,7 +101,7 @@ export default async function FavoritesPage() {
             <div className="mb-6">
               <SectionHeader title="אירועים שמורים" />
               <div className="px-4 space-y-3">
-                {favoritedEvents.map(({ event, minPriceAgorot, listingCount }) => (
+                {favoritedEvents.map(({ event, minPriceAgorot, listingCount, soleListingId }) => (
                   <EventCard
                     key={event.id}
                     event={event}
@@ -108,6 +109,7 @@ export default async function FavoritesPage() {
                     listingCount={listingCount}
                     isFavorited
                     canFavorite
+                    soleListingId={soleListingId}
                   />
                 ))}
               </div>
