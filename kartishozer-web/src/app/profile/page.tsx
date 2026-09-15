@@ -8,8 +8,9 @@ import {
   ChevronLeft,
   UserRound,
   MessageCircle,
+  LayoutDashboard,
 } from "lucide-react";
-import { getAppUser } from "@/lib/auth/server";
+import { getAppUser, isAdmin } from "@/lib/auth/server";
 import { db } from "@/lib/db";
 import { fmtAgorot, fmtDate } from "@/lib/format";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_TONE } from "@/lib/status-labels";
@@ -39,7 +40,7 @@ export default async function ProfilePage() {
     );
   }
 
-  const [myListings, myOrders, mySales] = await Promise.all([
+  const [myListings, myOrders, mySales, userIsAdmin] = await Promise.all([
     user.vendor
       ? db.listing.findMany({
           where: { vendorId: user.vendor.id, deletedAt: null },
@@ -59,11 +60,16 @@ export default async function ProfilePage() {
           orderBy: { createdAt: "desc" },
         })
       : Promise.resolve([]),
+    isAdmin(),
   ]);
 
   // "התראות" was removed — there's no notification system behind it yet,
   // and a menu item that does nothing when tapped is worse than no item.
+  // "לוח ניהול" only shows for admins — this is the one place a signed-in
+  // admin can always get back into /admin without retyping the URL (the
+  // admin panel's own "חזרה לאתר" link has no matching way back).
   const menuItems = [
+    ...(userIsAdmin ? [{ icon: LayoutDashboard, label: "לוח ניהול", href: "/admin" }] : []),
     { icon: ShieldQuestion, label: "אימות ואבטחה", href: "/user-profile" },
     { icon: HelpCircle, label: "עזרה ותמיכה", href: "/help" },
   ];
