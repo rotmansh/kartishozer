@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { getListing, getEvent, computeOrderTotals } from "@/lib/queries/catalog";
 import { getCategory } from "@/lib/mock/categories";
+import { getAppUser } from "@/lib/auth/server";
 import { fmtAgorot, fmtEventDate, fmtTime } from "@/lib/format";
 import { markupPercent } from "@/lib/types";
 import { TopBar } from "@/components/layout/TopBar";
@@ -18,6 +19,7 @@ import { SellerBadge } from "@/components/SellerBadge";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ShareButton } from "@/components/ShareButton";
+import { ListingOwnerActions } from "@/components/ListingOwnerActions";
 
 type Props = { params: { id: string } };
 
@@ -52,6 +54,10 @@ export default async function ListingDetailsPage({ params }: Props) {
   const category = getCategory(event.category);
   const markup = markupPercent(listing.priceAgorot, listing.faceValueAgorot);
   const totals = await computeOrderTotals(listing.priceAgorot);
+
+  const user = await getAppUser();
+  const isOwner = !!user?.vendor && user.vendor.id === listing.seller.id;
+  const canManage = listing.status === "ACTIVE" || listing.status === "PENDING_REVIEW";
 
   return (
     <div className="pb-28">
@@ -161,24 +167,28 @@ export default async function ListingDetailsPage({ params }: Props) {
 
       {/* Sticky CTA */}
       <div className="fixed bottom-16 inset-x-0 z-30 max-w-app mx-auto px-4 pb-3 pt-4 bg-gradient-to-t from-ink-50 via-ink-50/95 to-transparent">
-        <div className="flex gap-2.5">
-          <button
-            aria-label="צרו קשר עם המוכר"
-            className="tap h-14 w-14 flex-shrink-0 rounded-2xl bg-white border border-ink-900/10 flex items-center justify-center shadow-card"
-          >
-            <MessageCircle size={20} className="text-ink-700" />
-          </button>
-          <ShareButton
-            iconOnly
-            title={event.nameHe}
-            text={`כרטיס ל${event.nameHe} ב${event.venue.city} · החל מ־${fmtAgorot(listing.priceAgorot)}`}
-          />
-          <Link href={`/checkout/${listing.id}`} className="flex-1">
-            <Button size="lg" fullWidth>
-              קנו עכשיו · {fmtAgorot(totals.totalAgorot)}
-            </Button>
-          </Link>
-        </div>
+        {isOwner ? (
+          <ListingOwnerActions listingId={listing.id} canManage={canManage} />
+        ) : (
+          <div className="flex gap-2.5">
+            <button
+              aria-label="צרו קשר עם המוכר"
+              className="tap h-14 w-14 flex-shrink-0 rounded-2xl bg-white border border-ink-900/10 flex items-center justify-center shadow-card"
+            >
+              <MessageCircle size={20} className="text-ink-700" />
+            </button>
+            <ShareButton
+              iconOnly
+              title={event.nameHe}
+              text={`כרטיס ל${event.nameHe} ב${event.venue.city} · החל מ־${fmtAgorot(listing.priceAgorot)}`}
+            />
+            <Link href={`/checkout/${listing.id}`} className="flex-1">
+              <Button size="lg" fullWidth>
+                קנו עכשיו · {fmtAgorot(totals.totalAgorot)}
+              </Button>
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
