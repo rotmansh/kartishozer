@@ -59,7 +59,7 @@ export default async function AdminListingsPage({ searchParams }: Props) {
         baseHref="/admin/listings"
       />
 
-      <div className="flex gap-1.5 mb-5">
+      <div className="flex flex-wrap gap-1.5 mb-5">
         {[
           { key: undefined, label: "כל הרמות" },
           { key: "HIGH", label: "סיכון גבוה" },
@@ -90,8 +90,8 @@ export default async function AdminListingsPage({ searchParams }: Props) {
           <p className="text-white/30 text-sm">אין ליסטינגים בקטגוריה זו</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-white/10 overflow-hidden">
-          <table className="w-full text-right text-xs">
+        <div className="rounded-xl border border-white/10 overflow-x-auto">
+          <table className="w-full min-w-[820px] text-right text-xs">
             <thead>
               <tr className="border-b border-white/10 bg-white/5">
                 {["אירוע", "מוכר", "מחיר / פנים", "סיכון", "דגלים", "סטטוס", "פעולות"].map((h) => (

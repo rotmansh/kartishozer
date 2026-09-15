@@ -71,8 +71,8 @@ export async function DisputesPage({
         ) : (
           items.map((dispute) => (
             <div key={dispute.id} className="rounded-xl border border-white/10 bg-white/3 p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 space-y-1">
+              <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <AdminBadge value={dispute.status} />
                     <span className="text-xs text-white/30 font-mono">{dispute.id.slice(-8)}</span>
@@ -88,13 +88,13 @@ export async function DisputesPage({
                 </div>
 
                 {(dispute.status === "OPEN" || dispute.status === "UNDER_REVIEW") && (
-                  <div className="flex-shrink-0 w-64">
+                  <div className="w-full sm:w-64 sm:flex-shrink-0">
                     <DisputeResolvePanel disputeId={dispute.id} />
                   </div>
                 )}
 
                 {dispute.resolution && (
-                  <div className="flex-shrink-0 w-64 rounded-xl bg-white/5 border border-white/10 p-3">
+                  <div className="w-full sm:w-64 sm:flex-shrink-0 rounded-xl bg-white/5 border border-white/10 p-3">
                     <p className="text-[11px] font-black text-white/40 mb-1">פתרון</p>
                     <p className="text-xs text-white/60">{dispute.resolution}</p>
                     <p className="text-[10px] text-white/25 mt-1">{fmtDt(dispute.resolvedAt)}</p>
@@ -136,8 +136,8 @@ export async function PayoutsPage({
         baseHref="/admin/payouts"
       />
 
-      <div className="rounded-xl border border-white/10 overflow-hidden">
-        <table className="w-full text-right text-xs">
+      <div className="rounded-xl border border-white/10 overflow-x-auto">
+        <table className="w-full min-w-[720px] text-right text-xs">
           <thead>
             <tr className="border-b border-white/10 bg-white/5">
               {["מוכר", "אירוע", "סכום", "טריגר", "מתוזמן", "סטטוס", "פעולות"].map((h) => (
@@ -201,8 +201,8 @@ export async function UsersPage({
         baseHref="/admin/users"
       />
 
-      <div className="rounded-xl border border-white/10 overflow-hidden">
-        <table className="w-full text-right text-xs">
+      <div className="rounded-xl border border-white/10 overflow-x-auto">
+        <table className="w-full min-w-[720px] text-right text-xs">
           <thead>
             <tr className="border-b border-white/10 bg-white/5">
               {["מוכר", "אימות", "ליסטינגים", "הזמנות", "נרשם", "סטטוס", "פעולות"].map((h) => (
@@ -255,7 +255,7 @@ export async function ConfigPage() {
       <AdminPageHeader title="הגדרות פלטפורמה" />
       <div className="rounded-xl border border-white/10 overflow-hidden divide-y divide-white/5">
         {config.map((entry) => (
-          <div key={entry.key} className="flex items-start justify-between gap-6 px-5 py-4 hover:bg-white/3">
+          <div key={entry.key} className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-6 px-5 py-4 hover:bg-white/3">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-white/80">{entry.label}</p>
               <p className="text-xs text-white/30 mt-0.5">{entry.description}</p>
@@ -263,7 +263,7 @@ export async function ConfigPage() {
                 <p className="text-[10px] text-white/20 mt-1">עודכן: {fmtDt(entry.updatedAt)}</p>
               )}
             </div>
-            <div className="flex-shrink-0">
+            <div className="sm:flex-shrink-0">
               <ConfigEditor entry={entry} />
             </div>
           </div>
@@ -300,8 +300,8 @@ export async function AuditPage({
     <div>
       <AdminPageHeader title="Audit Log" count={total} />
 
-      <div className="rounded-xl border border-white/10 overflow-hidden">
-        <table className="w-full text-right text-xs">
+      <div className="rounded-xl border border-white/10 overflow-x-auto">
+        <table className="w-full min-w-[560px] text-right text-xs">
           <thead>
             <tr className="border-b border-white/10 bg-white/5">
               {["תאריך", "פעולה", "סוג", "ID", "משתמש"].map((h) => (
