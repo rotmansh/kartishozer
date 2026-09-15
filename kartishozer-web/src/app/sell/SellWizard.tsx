@@ -12,11 +12,12 @@ import {
   AlertTriangle,
   PartyPopper,
 } from "lucide-react";
-import { searchEventsForSellAction } from "@/lib/actions/events.actions";
+import { searchEventsForSellAction, createEventAction } from "@/lib/actions/events.actions";
 import { createListingAction } from "@/lib/actions/listings.actions";
 import { fmtAgorot, fmtDate } from "@/lib/format";
 import { markupPercent } from "@/lib/types";
-import type { EventItem } from "@/lib/types";
+import type { EventItem, CategorySlug } from "@/lib/types";
+import { CATEGORIES } from "@/lib/mock/categories";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
@@ -37,8 +38,17 @@ export function SellWizard() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [eventQuery, setEventQuery] = useState("");
-  const [manualEventName, setManualEventName] = useState("");
   const [, startSearchTransition] = useTransition();
+
+  const [showNewEventForm, setShowNewEventForm] = useState(false);
+  const [newEventName, setNewEventName] = useState("");
+  const [newEventCategory, setNewEventCategory] = useState<CategorySlug>("concerts");
+  const [newEventVenue, setNewEventVenue] = useState("");
+  const [newEventCity, setNewEventCity] = useState("");
+  const [newEventDate, setNewEventDate] = useState("");
+  const [newEventTime, setNewEventTime] = useState("20:00");
+  const [creatingEvent, setCreatingEvent] = useState(false);
+  const [createEventError, setCreateEventError] = useState<string | null>(null);
 
   const [quantity, setQuantity] = useState(2);
   const [section, setSection] = useState("");
@@ -75,7 +85,7 @@ export function SellWizard() {
 
   async function handlePublish() {
     if (!selectedEvent) {
-      setSubmitError("כרגע ניתן לפרסם כרטיס רק לאירוע קיים ברשימה — תמיכה בהוספת אירועים חדשים תגיע בהמשך");
+      setSubmitError("יש לבחור אירוע לפני הפרסום");
       return;
     }
     setSubmitting(true);
@@ -112,7 +122,7 @@ export function SellWizard() {
         </p>
         <div className="w-full max-w-xs space-y-2.5 pt-2">
           <Link href="/profile">
-            <Button fullWidth>לצפייה בליסטינגים שלי</Button>
+            <Button fullWidth>לצפייה במודעות שלי</Button>
           </Link>
           <Link href="/">
             <Button fullWidth variant="outline">
@@ -163,10 +173,7 @@ export function SellWizard() {
             {events.map((e) => (
               <button
                 key={e.id}
-                onClick={() => {
-                  setSelectedEvent(e);
-                  setManualEventName("");
-                }}
+                onClick={() => setSelectedEvent(e)}
                 className={cn(
                   "tap w-full flex items-center gap-3 rounded-2xl border p-3 text-right",
                   selectedEvent?.id === e.id ? "border-brand bg-brand-50" : "border-ink-900/10 bg-white"
@@ -185,20 +192,118 @@ export function SellWizard() {
           </div>
 
           <div className="pt-2">
-            <p className="text-xs font-bold text-ink-400 mb-2">לא מוצאים את האירוע?</p>
-            <input
-              value={manualEventName}
-              onChange={(e) => {
-                setManualEventName(e.target.value);
-                setSelectedEvent(null);
-              }}
-              placeholder="הקלידו שם אירוע, מקום ותאריך"
-              className="w-full rounded-2xl bg-white border border-ink-900/10 px-4 h-12 text-sm outline-none placeholder-ink-300"
-            />
-            {manualEventName.trim().length > 2 && (
-              <p className="text-[11px] text-ink-400 mt-1.5">
-                תמיכה בהוספת אירועים חדשים תגיע בקרוב — בינתיים חובה לבחור אירוע קיים מהרשימה למעלה כדי להמשיך.
-              </p>
+            {!showNewEventForm ? (
+              <button
+                onClick={() => setShowNewEventForm(true)}
+                className="tap w-full rounded-2xl border border-dashed border-ink-900/15 p-3.5 text-sm font-bold text-brand-600 text-center"
+              >
+                לא מוצאים את האירוע? הוסיפו אותו
+              </button>
+            ) : (
+              <div className="rounded-2xl bg-white border border-ink-900/10 p-4 space-y-3">
+                <p className="text-sm font-black text-ink-900">הוספת אירוע חדש</p>
+
+                <input
+                  value={newEventName}
+                  onChange={(e) => setNewEventName(e.target.value)}
+                  placeholder="שם ההופעה / האטרקציה"
+                  className="w-full rounded-xl bg-ink-50 border border-ink-900/10 px-4 h-11 text-sm outline-none placeholder-ink-300"
+                />
+
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                  {CATEGORIES.map((c) => (
+                    <button
+                      key={c.slug}
+                      onClick={() => setNewEventCategory(c.slug)}
+                      className={cn(
+                        "tap flex-shrink-0 rounded-full px-3 h-9 text-xs font-bold border",
+                        newEventCategory === c.slug
+                          ? "bg-brand text-white border-brand"
+                          : "bg-ink-50 text-ink-700 border-ink-900/10"
+                      )}
+                    >
+                      {c.emoji} {c.labelHe}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    value={newEventVenue}
+                    onChange={(e) => setNewEventVenue(e.target.value)}
+                    placeholder="שם המקום"
+                    className="w-full rounded-xl bg-ink-50 border border-ink-900/10 px-4 h-11 text-sm outline-none placeholder-ink-300"
+                  />
+                  <input
+                    value={newEventCity}
+                    onChange={(e) => setNewEventCity(e.target.value)}
+                    placeholder="עיר"
+                    className="w-full rounded-xl bg-ink-50 border border-ink-900/10 px-4 h-11 text-sm outline-none placeholder-ink-300"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="date"
+                    value={newEventDate}
+                    onChange={(e) => setNewEventDate(e.target.value)}
+                    dir="ltr"
+                    className="w-full rounded-xl bg-ink-50 border border-ink-900/10 px-3 h-11 text-sm outline-none"
+                  />
+                  <input
+                    type="time"
+                    value={newEventTime}
+                    onChange={(e) => setNewEventTime(e.target.value)}
+                    dir="ltr"
+                    className="w-full rounded-xl bg-ink-50 border border-ink-900/10 px-3 h-11 text-sm outline-none"
+                  />
+                </div>
+
+                {createEventError && (
+                  <p className="text-xs font-bold text-brand text-center">{createEventError}</p>
+                )}
+
+                <div className="flex gap-2 pt-1">
+                  <Button variant="outline" fullWidth onClick={() => setShowNewEventForm(false)}>
+                    ביטול
+                  </Button>
+                  <Button
+                    fullWidth
+                    disabled={
+                      creatingEvent ||
+                      !newEventName.trim() ||
+                      !newEventVenue.trim() ||
+                      !newEventCity.trim() ||
+                      !newEventDate
+                    }
+                    onClick={async () => {
+                      setCreateEventError(null);
+                      const startsAt = new Date(`${newEventDate}T${newEventTime || "20:00"}:00`);
+                      if (Number.isNaN(startsAt.getTime())) {
+                        setCreateEventError("תאריך לא תקין");
+                        return;
+                      }
+                      setCreatingEvent(true);
+                      const res = await createEventAction({
+                        nameHe: newEventName.trim(),
+                        category: newEventCategory,
+                        venueNameHe: newEventVenue.trim(),
+                        city: newEventCity.trim(),
+                        startsAt: startsAt.toISOString(),
+                      });
+                      setCreatingEvent(false);
+                      if ("error" in res) {
+                        setCreateEventError(res.error);
+                        return;
+                      }
+                      setSelectedEvent(res);
+                      setShowNewEventForm(false);
+                    }}
+                  >
+                    {creatingEvent ? "מוסיף…" : "הוספת אירוע"}
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -209,7 +314,7 @@ export function SellWizard() {
           <div>
             <h2 className="text-lg font-black text-ink-900 mb-1">פרטי הכרטיס</h2>
             <p className="text-sm text-ink-500">
-              {selectedEvent ? selectedEvent.nameHe : manualEventName}
+              {selectedEvent?.nameHe ?? ""}
             </p>
           </div>
 
@@ -327,7 +432,7 @@ export function SellWizard() {
           </div>
 
           <div className="bg-white rounded-2xl border border-ink-900/5 shadow-card p-4 space-y-3">
-            <Row label="אירוע" value={selectedEvent ? selectedEvent.nameHe : manualEventName} />
+            <Row label="אירוע" value={selectedEvent?.nameHe ?? ""} />
             {selectedEvent && (
               <Row label="תאריך" value={`${fmtDate(selectedEvent.startsAt)} · ${selectedEvent.venue.city}`} />
             )}

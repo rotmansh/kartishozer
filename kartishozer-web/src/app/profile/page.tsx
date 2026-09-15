@@ -3,7 +3,6 @@ import {
   Ticket,
   ShoppingBag,
   BadgeCheck,
-  Bell,
   ShieldQuestion,
   HelpCircle,
   ChevronLeft,
@@ -29,7 +28,7 @@ export default async function ProfilePage() {
         <EmptyState
           icon={<UserRound size={26} />}
           title="עדיין לא נכנסתם לחשבון"
-          subtitle="התחברו כדי לראות ליסטינגים, הזמנות ומועדפים"
+          subtitle="התחברו כדי לראות מודעות, הזמנות ומועדפים"
           action={
             <Link href="/sign-in">
               <Button>התחברות / הרשמה</Button>
@@ -62,10 +61,11 @@ export default async function ProfilePage() {
       : Promise.resolve([]),
   ]);
 
+  // "התראות" was removed — there's no notification system behind it yet,
+  // and a menu item that does nothing when tapped is worse than no item.
   const menuItems = [
-    { icon: Bell, label: "התראות" },
-    { icon: ShieldQuestion, label: "אימות ואבטחה" },
-    { icon: HelpCircle, label: "עזרה ותמיכה" },
+    { icon: ShieldQuestion, label: "אימות ואבטחה", href: "/user-profile" },
+    { icon: HelpCircle, label: "עזרה ותמיכה", href: "/help" },
   ];
 
   return (
@@ -103,7 +103,7 @@ export default async function ProfilePage() {
           </div>
           <div>
             <p className="text-lg font-black text-ink-900 leading-none">{myListings.length}</p>
-            <p className="text-[11px] text-ink-500 mt-1">הליסטינגים שלי</p>
+            <p className="text-[11px] text-ink-500 mt-1">המודעות שלי</p>
           </div>
         </div>
         <div className="rounded-2xl bg-white border border-ink-900/5 shadow-card p-4 flex items-center gap-3">
@@ -119,13 +119,13 @@ export default async function ProfilePage() {
 
       {/* My listings (sold tickets are ones with status SOLD inside this same list) */}
       <div className="mt-6">
-        <h2 className="px-4 text-sm font-black text-ink-900 mb-2">הליסטינגים שלי</h2>
+        <h2 className="px-4 text-sm font-black text-ink-900 mb-2">המודעות שלי</h2>
         {myListings.length === 0 ? (
           <div className="px-4">
             <EmptyState
               icon={<Ticket size={22} />}
-              title="אין לכם עדיין ליסטינגים"
-              subtitle="מכרתם כרטיס שלא תוכלו להשתמש בו? זה הזמן"
+              title="אין לכם עדיין מודעות"
+              subtitle="קניתם כרטיס שלא תוכלו להשתמש בו? זה הזמן למכור אותו הלאה"
               action={
                 <Link href="/sell">
                   <Button>מכירת כרטיס ראשון</Button>
@@ -236,14 +236,15 @@ export default async function ProfilePage() {
       {/* Menu */}
       <div className="mt-6 mx-4 rounded-2xl bg-white border border-ink-900/5 shadow-card overflow-hidden divide-y divide-ink-900/5">
         {menuItems.map((item) => (
-          <button
+          <Link
             key={item.label}
+            href={item.href}
             className="tap w-full flex items-center gap-3 px-4 py-3.5 text-right"
           >
             <item.icon size={18} className="text-ink-500 flex-shrink-0" />
             <span className="flex-1 text-sm font-bold text-ink-900">{item.label}</span>
             <ChevronLeft size={16} className="text-ink-300" />
-          </button>
+          </Link>
         ))}
       </div>
 

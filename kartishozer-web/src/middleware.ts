@@ -8,6 +8,7 @@ const isProtectedRoute = createRouteMatcher([
   "/profile(.*)",
   "/favorites(.*)",
   "/admin(.*)",
+  "/user-profile(.*)",
 ]);
 
 // Only publishableKey is passed explicitly here. Clerk's own
