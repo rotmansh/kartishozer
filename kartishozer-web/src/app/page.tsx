@@ -122,20 +122,26 @@ export default async function HomePage() {
       </div>
 
       {/* Trust strip */}
-      <div className="mx-4 mb-7 rounded-3xl bg-ink-900 text-white p-4 grid grid-cols-3 gap-2 text-center">
-        <div className="flex flex-col items-center gap-1.5">
-          <ShieldCheck size={20} className="text-accent-500" />
-          <span className="text-[10px] font-bold leading-tight">עסקה מאובטחת</span>
+      <Link
+        href="/how-it-works"
+        className="tap block mx-4 mb-7 rounded-3xl bg-ink-900 text-white p-4"
+      >
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="flex flex-col items-center gap-1.5">
+            <ShieldCheck size={20} className="text-accent-500" />
+            <span className="text-[10px] font-bold leading-tight">עסקה מאובטחת</span>
+          </div>
+          <div className="flex flex-col items-center gap-1.5">
+            <BadgeCheck size={20} className="text-brand-300" />
+            <span className="text-[10px] font-bold leading-tight">מוכרים מאומתים</span>
+          </div>
+          <div className="flex flex-col items-center gap-1.5">
+            <Zap size={20} className="text-amber-400" />
+            <span className="text-[10px] font-bold leading-tight">העברה דיגיטלית מהירה</span>
+          </div>
         </div>
-        <div className="flex flex-col items-center gap-1.5">
-          <BadgeCheck size={20} className="text-brand-300" />
-          <span className="text-[10px] font-bold leading-tight">מוכרים מאומתים</span>
-        </div>
-        <div className="flex flex-col items-center gap-1.5">
-          <Zap size={20} className="text-amber-400" />
-          <span className="text-[10px] font-bold leading-tight">העברה דיגיטלית מהירה</span>
-        </div>
-      </div>
+        <p className="text-center text-[11px] text-white/50 mt-3 font-bold">איך זה עובד ←</p>
+      </Link>
 
       {/* Newest listings */}
       <div>
