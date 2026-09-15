@@ -103,6 +103,7 @@ model Event {
   listings Listing[]
   orders   Order[]
 
+  @@unique([nameHe, venueId, startsAt])
   @@index([category])
   @@index([startsAt])
 }

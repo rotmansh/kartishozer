@@ -43,6 +43,56 @@ export async function searchEventsForSellAction(query: string): Promise<EventIte
   }
 }
 
+const findSimilarSchema = z.object({
+  venueNameHe: z.string().trim().min(2),
+  city: z.string().trim().min(2),
+  date: z.string().min(1), // yyyy-mm-dd, from the form's <input type="date">
+});
+
+/**
+ * Run before a seller finalizes "add a new event": looks for events
+ * already at the same venue (name+city) within a day of the chosen date.
+ * Exact-name matching (createEventAction's own safety net) only catches
+ * someone typing the identical event name — two sellers describing the
+ * same real show ("עומר אדם" vs "עומר אדם - סיבוב הופעות") wouldn't match
+ * that way, and would otherwise end up as two separate, un-comparable
+ * listings for what buyers experience as one event. This lets the UI
+ * surface likely matches so the seller can pick an existing one instead.
+ */
+export async function findSimilarEventsAction(
+  input: z.infer<typeof findSimilarSchema>
+): Promise<EventItem[]> {
+  const parsed = findSimilarSchema.safeParse(input);
+  if (!parsed.success) return [];
+  const { venueNameHe, city, date } = parsed.data;
+
+  const dayStart = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(dayStart.getTime())) return [];
+  const rangeStart = new Date(dayStart.getTime() - 24 * 3600 * 1000);
+  const rangeEnd = new Date(dayStart.getTime() + 48 * 3600 * 1000);
+
+  const events = await db.event.findMany({
+    where: {
+      startsAt: { gte: rangeStart, lt: rangeEnd },
+      venue: { nameHe: { contains: venueNameHe, mode: "insensitive" }, city: { contains: city, mode: "insensitive" } },
+    },
+    include: { venue: true },
+    orderBy: { startsAt: "asc" },
+    take: 5,
+  });
+
+  return events.map((event) => ({
+    id: event.id,
+    nameHe: event.nameHe,
+    category: event.category as CategorySlug,
+    venue: { id: event.venue.id, nameHe: event.venue.nameHe, city: event.venue.city },
+    startsAt: event.startsAt.toISOString(),
+    descriptionHe: event.descriptionHe,
+    gradient: [event.gradientFrom, event.gradientTo],
+    emoji: event.emoji,
+  }));
+}
+
 const createEventSchema = z.object({
   nameHe: z.string().trim().min(2).max(120),
   category: z.enum(["concerts", "standup", "theater", "sports", "attractions", "kids"]),
@@ -88,8 +138,17 @@ export async function createEventAction(
     update: {},
   });
 
-  const event = await db.event.create({
-    data: {
+  // Upserted, not created outright: if this exact name+venue+date was
+  // already added (very plausible — several sellers listing tickets to
+  // the same real show will often type the name near-identically), reuse
+  // that Event instead of fragmenting the same show across two rows,
+  // which would split their listings apart and defeat the whole point of
+  // letting buyers compare prices across sellers for the same event.
+  // This only catches an exact match; see findSimilarEventsAction for the
+  // fuzzier "did you mean one of these?" check the UI runs first.
+  const event = await db.event.upsert({
+    where: { nameHe_venueId_startsAt: { nameHe: data.nameHe, venueId: venue.id, startsAt } },
+    create: {
       nameHe: data.nameHe,
       category: data.category as CategorySlug,
       venueId: venue.id,
@@ -99,6 +158,7 @@ export async function createEventAction(
       gradientTo: categoryMeta.gradient[1],
       emoji: categoryMeta.emoji,
     },
+    update: {},
   });
 
   return {

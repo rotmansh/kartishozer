@@ -12,7 +12,7 @@ import {
   AlertTriangle,
   PartyPopper,
 } from "lucide-react";
-import { searchEventsForSellAction, createEventAction } from "@/lib/actions/events.actions";
+import { searchEventsForSellAction, createEventAction, findSimilarEventsAction } from "@/lib/actions/events.actions";
 import { createListingAction } from "@/lib/actions/listings.actions";
 import { fmtAgorot, fmtDate } from "@/lib/format";
 import { markupPercent } from "@/lib/types";
@@ -49,6 +49,7 @@ export function SellWizard() {
   const [newEventTime, setNewEventTime] = useState("20:00");
   const [creatingEvent, setCreatingEvent] = useState(false);
   const [createEventError, setCreateEventError] = useState<string | null>(null);
+  const [similarEvents, setSimilarEvents] = useState<EventItem[]>([]);
 
   const [quantity, setQuantity] = useState(2);
   const [section, setSection] = useState("");
@@ -68,6 +69,29 @@ export function SellWizard() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventQuery]);
+
+  // Checks for a likely-same real event at this venue+date as the seller
+  // fills in the "add new event" form — two people selling tickets to the
+  // same show rarely type the exact same event name, so this can't rely
+  // on createEventAction's exact-match dedup alone. Debounced since it
+  // fires on every keystroke in venue/city.
+  useEffect(() => {
+    if (!showNewEventForm || !newEventVenue.trim() || !newEventCity.trim() || !newEventDate) {
+      setSimilarEvents([]);
+      return;
+    }
+    const timeout = setTimeout(() => {
+      startSearchTransition(async () => {
+        const found = await findSimilarEventsAction({
+          venueNameHe: newEventVenue.trim(),
+          city: newEventCity.trim(),
+          date: newEventDate,
+        });
+        setSimilarEvents(found);
+      });
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [showNewEventForm, newEventVenue, newEventCity, newEventDate]);
 
   const faceValueAgorot = Math.round(Number(faceValue || 0) * 100);
   const priceAgorot = Math.round(Number(price || 0) * 100);
@@ -258,6 +282,32 @@ export function SellWizard() {
                     className="w-full rounded-xl bg-ink-50 border border-ink-900/10 px-3 h-11 text-sm outline-none"
                   />
                 </div>
+
+                {similarEvents.length > 0 && (
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-2">
+                    <p className="text-xs font-bold text-amber-800">
+                      נמצאו אירועים דומים באותו מקום ותאריך קרוב — אולי זה בדיוק האירוע שלכם? כדאי לבחור מהרשימה כדי שהכרטיס שלכם יופיע יחד עם כרטיסים אחרים לאותו אירוע.
+                    </p>
+                    {similarEvents.map((e) => (
+                      <button
+                        key={e.id}
+                        onClick={() => {
+                          setSelectedEvent(e);
+                          setShowNewEventForm(false);
+                        }}
+                        className="tap w-full flex items-center gap-2.5 rounded-lg bg-white border border-amber-200 p-2.5 text-right"
+                      >
+                        <span className="text-xl flex-shrink-0">{e.emoji}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-xs text-ink-900 truncate">{e.nameHe}</p>
+                          <p className="text-[10px] text-ink-500">
+                            {fmtDate(e.startsAt)} · {e.venue.city}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {createEventError && (
                   <p className="text-xs font-bold text-brand text-center">{createEventError}</p>
