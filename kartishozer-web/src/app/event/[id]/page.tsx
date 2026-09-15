@@ -12,6 +12,7 @@ import { ListingCard } from "@/components/ListingCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { CategoryArt } from "@/components/CategoryArt";
+import { EventFavoriteButton } from "@/components/EventFavoriteButton";
 
 type Props = { params: { id: string } };
 
@@ -38,9 +39,16 @@ export default async function EventDetailsPage({ params }: Props) {
       )
     : new Set<string>();
 
+  const isEventFavorited = user
+    ? !!(await db.eventFavorite.findUnique({ where: { userId_eventId: { userId: user.id, eventId: event.id } } }))
+    : false;
+
   return (
     <div className="pb-6">
-      <TopBar transparent />
+      <TopBar
+        transparent
+        action={<EventFavoriteButton eventId={event.id} isFavorited={isEventFavorited} canFavorite={!!user} />}
+      />
 
       <div
         className="-mt-14 pt-14 pb-8 px-4 text-white relative overflow-hidden"

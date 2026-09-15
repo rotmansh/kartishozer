@@ -87,6 +87,17 @@ export default async function HomePage() {
       )
     : new Set<string>();
 
+  const eventFavoriteIds = user
+    ? new Set(
+        (
+          await db.eventFavorite.findMany({
+            where: { userId: user.id, eventId: { in: featured.map((e) => e.id) } },
+            select: { eventId: true },
+          })
+        ).map((f) => f.eventId)
+      )
+    : new Set<string>();
+
   const newestWithEvents = await Promise.all(
     newest.map(async (l) => ({ listing: l, event: await getEvent(l.eventId) }))
   );
@@ -166,7 +177,15 @@ export default async function HomePage() {
         <SectionHeader title="אירועים מומלצים" href="/search" />
         <div className="flex gap-3 px-4 overflow-x-auto no-scrollbar pb-1">
           {featuredWithStats.map(({ event, minPriceAgorot, listingCount }) => (
-            <EventCard key={event.id} event={event} wide minPriceAgorot={minPriceAgorot} listingCount={listingCount} />
+            <EventCard
+              key={event.id}
+              event={event}
+              wide
+              minPriceAgorot={minPriceAgorot}
+              listingCount={listingCount}
+              isFavorited={eventFavoriteIds.has(event.id)}
+              canFavorite={!!user}
+            />
           ))}
         </div>
       </div>

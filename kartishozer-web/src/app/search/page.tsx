@@ -45,12 +45,15 @@ export default function SearchPage() {
   );
   const [sort, setSort] = useState<SearchSortKey>("date");
   const [results, setResults] = useState<SearchResultItem[]>([]);
+  const [canFavorite, setCanFavorite] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     const handle = setTimeout(() => {
       startTransition(async () => {
-        setResults(await searchCatalogAction({ query, category, sort, when }));
+        const { items, canFavorite } = await searchCatalogAction({ query, category, sort, when });
+        setResults(items);
+        setCanFavorite(canFavorite);
       });
     }, 150);
     return () => clearTimeout(handle);
@@ -131,8 +134,15 @@ export default function SearchPage() {
         ) : (
           <div className="space-y-3">
             <p className="text-xs text-ink-500 font-bold px-1">{results.length} אירועים נמצאו</p>
-            {results.map(({ event, minPriceAgorot, listingCount }) => (
-              <EventCard key={event.id} event={event} minPriceAgorot={minPriceAgorot} listingCount={listingCount} />
+            {results.map(({ event, minPriceAgorot, listingCount, isFavorited }) => (
+              <EventCard
+                key={event.id}
+                event={event}
+                minPriceAgorot={minPriceAgorot}
+                listingCount={listingCount}
+                isFavorited={isFavorited}
+                canFavorite={canFavorite}
+              />
             ))}
           </div>
         )}

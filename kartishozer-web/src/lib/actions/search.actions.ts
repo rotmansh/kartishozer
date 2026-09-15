@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { getMinPriceAgorot, getListingCount } from "@/lib/queries/catalog";
+import { getAppUser } from "@/lib/auth/server";
 import type { EventItem, CategorySlug } from "@/lib/types";
 
 export type SearchSortKey = "date" | "price_asc" | "price_desc";
@@ -11,6 +12,12 @@ export type SearchResultItem = {
   event: EventItem;
   minPriceAgorot: number | null;
   listingCount: number;
+  isFavorited: boolean;
+};
+
+export type SearchCatalogResult = {
+  items: SearchResultItem[];
+  canFavorite: boolean;
 };
 
 // Calendar-day boundaries (server local time — close enough for a quick
@@ -38,27 +45,41 @@ export async function searchCatalogAction(input: {
   category: CategorySlug | null;
   sort: SearchSortKey;
   when?: WhenFilter | null;
-}): Promise<SearchResultItem[]> {
+}): Promise<SearchCatalogResult> {
   const q = input.query.trim();
   const whenBounds = input.when ? whenRange(input.when) : null;
 
-  const events = await db.event.findMany({
-    where: {
-      startsAt: whenBounds ?? { gte: new Date() },
-      ...(input.category ? { category: input.category } : {}),
-      ...(q
-        ? {
-            OR: [
-              { nameHe: { contains: q, mode: "insensitive" } },
-              { venue: { nameHe: { contains: q, mode: "insensitive" } } },
-              { venue: { city: { contains: q, mode: "insensitive" } } },
-            ],
-          }
-        : {}),
-    },
-    include: { venue: true },
-    orderBy: input.sort === "date" ? { startsAt: "asc" } : undefined,
-  });
+  const [events, user] = await Promise.all([
+    db.event.findMany({
+      where: {
+        startsAt: whenBounds ?? { gte: new Date() },
+        ...(input.category ? { category: input.category } : {}),
+        ...(q
+          ? {
+              OR: [
+                { nameHe: { contains: q, mode: "insensitive" } },
+                { venue: { nameHe: { contains: q, mode: "insensitive" } } },
+                { venue: { city: { contains: q, mode: "insensitive" } } },
+              ],
+            }
+          : {}),
+      },
+      include: { venue: true },
+      orderBy: input.sort === "date" ? { startsAt: "asc" } : undefined,
+    }),
+    getAppUser(),
+  ]);
+
+  const favoriteEventIds = user
+    ? new Set(
+        (
+          await db.eventFavorite.findMany({
+            where: { userId: user.id, eventId: { in: events.map((e) => e.id) } },
+            select: { eventId: true },
+          })
+        ).map((f) => f.eventId)
+      )
+    : new Set<string>();
 
   const items: SearchResultItem[] = await Promise.all(
     events.map(async (event) => ({
@@ -74,6 +95,7 @@ export async function searchCatalogAction(input: {
       },
       minPriceAgorot: await getMinPriceAgorot(event.id),
       listingCount: await getListingCount(event.id),
+      isFavorited: favoriteEventIds.has(event.id),
     }))
   );
 
@@ -85,5 +107,5 @@ export async function searchCatalogAction(input: {
     });
   }
 
-  return items;
+  return { items, canFavorite: !!user };
 }

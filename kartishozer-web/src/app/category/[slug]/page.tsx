@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getCategory } from "@/lib/mock/categories";
 import { getEventsByCategory, getMinPriceAgorot, getListingCount } from "@/lib/queries/catalog";
+import { getAppUser } from "@/lib/auth/server";
+import { db } from "@/lib/db";
 import { EventCard } from "@/components/EventCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TopBar } from "@/components/layout/TopBar";
@@ -18,7 +20,7 @@ export default async function CategoryPage({ params }: Props) {
   const category = getCategory(params.slug);
   if (!category) notFound();
 
-  const events = await getEventsByCategory(category.slug);
+  const [events, user] = await Promise.all([getEventsByCategory(category.slug), getAppUser()]);
   const eventsWithStats = await Promise.all(
     events.map(async (e) => ({
       event: e,
@@ -26,6 +28,17 @@ export default async function CategoryPage({ params }: Props) {
       listingCount: await getListingCount(e.id),
     }))
   );
+
+  const eventFavoriteIds = user
+    ? new Set(
+        (
+          await db.eventFavorite.findMany({
+            where: { userId: user.id, eventId: { in: events.map((e) => e.id) } },
+            select: { eventId: true },
+          })
+        ).map((f) => f.eventId)
+      )
+    : new Set<string>();
 
   return (
     <div>
@@ -48,7 +61,14 @@ export default async function CategoryPage({ params }: Props) {
           />
         ) : (
           eventsWithStats.map(({ event, minPriceAgorot, listingCount }) => (
-            <EventCard key={event.id} event={event} minPriceAgorot={minPriceAgorot} listingCount={listingCount} />
+            <EventCard
+              key={event.id}
+              event={event}
+              minPriceAgorot={minPriceAgorot}
+              listingCount={listingCount}
+              isFavorited={eventFavoriteIds.has(event.id)}
+              canFavorite={!!user}
+            />
           ))
         )}
       </div>

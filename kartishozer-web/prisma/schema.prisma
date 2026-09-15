@@ -35,6 +35,7 @@ model User {
   conversationsAsBuyer  Conversation[] @relation("ConversationBuyer")
   conversationsAsSeller Conversation[] @relation("ConversationSeller")
   sentMessages          Message[]
+  eventFavorites        EventFavorite[]
 }
 
 enum VerificationLevel {
@@ -102,10 +103,25 @@ model Event {
 
   listings Listing[]
   orders   Order[]
+  favoritedBy EventFavorite[]
 
   @@unique([nameHe, venueId, startsAt])
   @@index([category])
   @@index([startsAt])
+}
+
+// Saving interest in an event/attraction itself — distinct from Favorite
+// (below), which saves a specific seller's listing. A buyer often wants
+// to bookmark a show before any tickets they like are even listed yet.
+model EventFavorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, eventId])
 }
 
 // ── Listings & risk ───────────────────────────────────────────
