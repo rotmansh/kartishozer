@@ -132,15 +132,10 @@ export default async function HomePage() {
             <Link
               key={tile.key}
               href={`/search?when=${tile.key}`}
-              className="tap flex items-center justify-between gap-2 rounded-2xl bg-ink-50 border border-ink-900/5 px-4 py-3.5"
+              className="tap flex items-center justify-between gap-2 rounded-2xl bg-ink-100 px-4 py-4"
             >
               <span className="text-[13px] font-bold text-ink-900">{tile.label}</span>
-              <div
-                className="h-9 w-9 rounded-xl bg-white flex items-center justify-center flex-shrink-0 shadow-card"
-                style={{ color: tile.color }}
-              >
-                <tile.icon size={18} />
-              </div>
+              <tile.icon size={22} style={{ color: tile.color }} className="flex-shrink-0" />
             </Link>
           ))}
         </div>
@@ -156,15 +151,10 @@ export default async function HomePage() {
               <Link
                 key={cat.slug}
                 href={`/category/${cat.slug}`}
-                className="tap flex items-center justify-between gap-2 rounded-2xl bg-ink-50 border border-ink-900/5 px-4 py-3.5"
+                className="tap flex items-center justify-between gap-2 rounded-2xl bg-ink-100 px-4 py-4"
               >
                 <span className="text-[13px] font-bold text-ink-900">{cat.labelHe}</span>
-                <div
-                  className="h-9 w-9 rounded-xl bg-white flex items-center justify-center flex-shrink-0 shadow-card"
-                  style={{ color: CATEGORY_SOFT_COLOR[cat.slug] }}
-                >
-                  <Icon size={18} />
-                </div>
+                <Icon size={22} style={{ color: CATEGORY_SOFT_COLOR[cat.slug] }} className="flex-shrink-0" />
               </Link>
             );
           })}
