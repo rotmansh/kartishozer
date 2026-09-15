@@ -6,8 +6,7 @@ import Link from "next/link";
 import { Heart, ShieldCheck, Ticket } from "lucide-react";
 import type { Listing, EventItem } from "@/lib/types";
 import { markupPercent } from "@/lib/types";
-import { fmtAgorot } from "@/lib/format";
-import { fmtDate } from "@/lib/format";
+import { fmtAgorot, fmtEventDate } from "@/lib/format";
 import { SellerBadge } from "@/components/SellerBadge";
 import { toggleFavoriteAction } from "@/lib/actions/favorites.actions";
 import { cn } from "@/lib/cn";
@@ -58,7 +57,7 @@ export function ListingCard({
           <div className="mb-2.5 pl-10">
             <p className="text-sm font-black text-ink-900 truncate">{event.nameHe}</p>
             <p className="text-xs text-ink-500">
-              {fmtDate(event.startsAt)} · {event.venue.city}
+              {fmtEventDate(event)} · {event.venue.city}
             </p>
           </div>
         )}

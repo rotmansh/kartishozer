@@ -27,3 +27,14 @@ export function fmtTime(iso: string): string {
     hour12: false,
   }).format(new Date(iso));
 }
+
+// An open-date event's startsAt is a fixed sentinel, not a real showtime
+// (see OPEN_DATE_SENTINEL in lib/types) — every place that would
+// otherwise print that date/time should show this instead.
+export function fmtEventDate(event: { startsAt: string; isOpenDate: boolean }): string {
+  return event.isOpenDate ? "תאריך פתוח" : fmtDate(event.startsAt);
+}
+
+export function fmtEventDateLong(event: { startsAt: string; isOpenDate: boolean }): string {
+  return event.isOpenDate ? "תאריך פתוח" : fmtDateLong(event.startsAt);
+}

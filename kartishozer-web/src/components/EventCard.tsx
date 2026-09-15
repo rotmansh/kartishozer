@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Calendar, Heart } from "lucide-react";
 import type { EventItem } from "@/lib/types";
-import { fmtDate } from "@/lib/format";
-import { fmtAgorot } from "@/lib/format";
+import { fmtEventDate, fmtAgorot } from "@/lib/format";
 import { getCategory } from "@/lib/mock/categories";
 import { CategoryArt } from "@/components/CategoryArt";
 import { toggleEventFavoriteAction } from "@/lib/actions/favorites.actions";
@@ -85,7 +84,7 @@ export function EventCard({
         <p className="font-black text-ink-900 text-sm leading-snug line-clamp-2">{event.nameHe}</p>
         <div className="flex items-center gap-1 text-ink-500 text-xs">
           <Calendar size={13} />
-          <span>{fmtDate(event.startsAt)}</span>
+          <span>{fmtEventDate(event)}</span>
           <span className="mx-0.5">·</span>
           <MapPin size={13} />
           <span className="truncate">{event.venue.city}</span>

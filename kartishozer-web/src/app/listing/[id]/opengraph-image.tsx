@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import bidiFactory from "bidi-js";
 import { getListing, getEvent } from "@/lib/queries/catalog";
-import { fmtAgorot, fmtDate } from "@/lib/format";
+import { fmtAgorot, fmtEventDate } from "@/lib/format";
 
 export const alt = "כרטיס חוזר";
 export const size = { width: 1200, height: 630 };
@@ -41,7 +41,7 @@ export default async function Image({ params }: { params: { id: string } }) {
   const gradient = event ? event.gradient : ["#E8503A", "#F5876F"];
   const title = toVisualOrder(event?.nameHe ?? "כרטיס חוזר");
   const venueText = event
-    ? toVisualOrder(`${event.venue.nameHe}, ${event.venue.city} · ${fmtDate(event.startsAt)}`)
+    ? toVisualOrder(`${event.venue.nameHe}, ${event.venue.city} · ${fmtEventDate(event)}`)
     : "";
   const priceText = listing ? toVisualOrder(fmtAgorot(listing.priceAgorot)) : null;
   const brandLabel = toVisualOrder("כרטיס חוזר");

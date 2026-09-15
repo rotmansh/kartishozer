@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { getListing, getEvent, computeOrderTotals } from "@/lib/queries/catalog";
 import { getCategory } from "@/lib/mock/categories";
-import { fmtAgorot, fmtDate, fmtTime } from "@/lib/format";
+import { fmtAgorot, fmtEventDate, fmtTime } from "@/lib/format";
 import { markupPercent } from "@/lib/types";
 import { TopBar } from "@/components/layout/TopBar";
 import { SellerBadge } from "@/components/SellerBadge";
@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = event ? `${event.nameHe} | כרטיס חוזר` : "כרטיס חוזר";
   const description =
     event && listing
-      ? `כרטיס ל${event.nameHe} ב${event.venue.city} · ${fmtDate(event.startsAt)} · החל מ־${fmtAgorot(
+      ? `כרטיס ל${event.nameHe} ב${event.venue.city} · ${fmtEventDate(event)} · החל מ־${fmtAgorot(
           listing.priceAgorot
         )}`
       : "קונים ומוכרים כרטיסים ביד שנייה — בבטחה.";
@@ -68,7 +68,7 @@ export default async function ListingDetailsPage({ params }: Props) {
           <p className="font-black text-sm truncate">{event.nameHe}</p>
           <div className="flex items-center gap-1.5 text-[11px] text-white/85 mt-0.5">
             <Calendar size={11} />
-            {fmtDate(event.startsAt)} · {fmtTime(event.startsAt)}
+            {event.isOpenDate ? fmtEventDate(event) : `${fmtEventDate(event)} · ${fmtTime(event.startsAt)}`}
             <span className="mx-0.5">·</span>
             <MapPin size={11} />
             {event.venue.city}

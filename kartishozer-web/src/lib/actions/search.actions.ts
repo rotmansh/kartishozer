@@ -90,6 +90,7 @@ export async function searchCatalogAction(input: {
         category: event.category as CategorySlug,
         venue: { id: event.venue.id, nameHe: event.venue.nameHe, city: event.venue.city },
         startsAt: event.startsAt.toISOString(),
+        isOpenDate: event.isOpenDate,
         descriptionHe: event.descriptionHe,
         gradient: [event.gradientFrom, event.gradientTo],
         emoji: event.emoji,

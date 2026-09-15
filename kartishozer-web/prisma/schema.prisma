@@ -95,6 +95,13 @@ model Event {
   venueId       String
   venue         Venue        @relation(fields: [venueId], references: [id])
   startsAt      DateTime
+  // True for tickets not tied to a specific showtime (a theme park, a
+  // museum) — startsAt is then a fixed far-future sentinel rather than a
+  // real date, purely so multiple sellers listing the same open-date
+  // attraction collide on the existing @@unique below and land on one
+  // Event instead of fragmenting across rows keyed by whatever arbitrary
+  // date each seller happened to type in.
+  isOpenDate    Boolean      @default(false)
   descriptionHe String
   gradientFrom  String
   gradientTo    String

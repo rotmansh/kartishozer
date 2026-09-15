@@ -12,7 +12,7 @@ import {
   MapPin,
 } from "lucide-react";
 import type { Listing, EventItem } from "@/lib/types";
-import { fmtAgorot, fmtDate, fmtTime } from "@/lib/format";
+import { fmtAgorot, fmtEventDate, fmtTime } from "@/lib/format";
 import { createOrderAction } from "@/lib/actions/orders.actions";
 import { TopBar } from "@/components/layout/TopBar";
 import { SellerBadge } from "@/components/SellerBadge";
@@ -97,7 +97,7 @@ export function CheckoutClient({
             <p className="font-black text-sm text-ink-900 truncate">{event.nameHe}</p>
             <div className="flex items-center gap-1.5 text-[11px] text-ink-500 mt-0.5">
               <Calendar size={11} />
-              {fmtDate(event.startsAt)} · {fmtTime(event.startsAt)}
+              {event.isOpenDate ? fmtEventDate(event) : `${fmtEventDate(event)} · ${fmtTime(event.startsAt)}`}
               <span className="mx-0.5">·</span>
               <MapPin size={11} />
               {event.venue.city}

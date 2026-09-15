@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { searchEventsForSellAction, createEventAction, findSimilarEventsAction } from "@/lib/actions/events.actions";
 import { createListingAction } from "@/lib/actions/listings.actions";
-import { fmtAgorot, fmtDate } from "@/lib/format";
+import { fmtAgorot, fmtEventDate } from "@/lib/format";
 import { markupPercent } from "@/lib/types";
 import type { EventItem, CategorySlug } from "@/lib/types";
 import { CATEGORIES } from "@/lib/mock/categories";
@@ -48,6 +48,7 @@ export function SellWizard() {
   const [newEventCity, setNewEventCity] = useState("");
   const [newEventDate, setNewEventDate] = useState("");
   const [newEventTime, setNewEventTime] = useState("20:00");
+  const [newEventOpenDate, setNewEventOpenDate] = useState(false);
   const [creatingEvent, setCreatingEvent] = useState(false);
   const [createEventError, setCreateEventError] = useState<string | null>(null);
   const [similarEvents, setSimilarEvents] = useState<EventItem[]>([]);
@@ -77,7 +78,7 @@ export function SellWizard() {
   // on createEventAction's exact-match dedup alone. Debounced since it
   // fires on every keystroke in venue/city.
   useEffect(() => {
-    if (!showNewEventForm || !newEventVenue.trim() || !newEventCity.trim() || !newEventDate) {
+    if (!showNewEventForm || !newEventVenue.trim() || !newEventCity.trim() || (!newEventOpenDate && !newEventDate)) {
       setSimilarEvents([]);
       return;
     }
@@ -86,13 +87,14 @@ export function SellWizard() {
         const found = await findSimilarEventsAction({
           venueNameHe: newEventVenue.trim(),
           city: newEventCity.trim(),
-          date: newEventDate,
+          date: newEventOpenDate ? undefined : newEventDate,
+          isOpenDate: newEventOpenDate,
         });
         setSimilarEvents(found);
       });
     }, 400);
     return () => clearTimeout(timeout);
-  }, [showNewEventForm, newEventVenue, newEventCity, newEventDate]);
+  }, [showNewEventForm, newEventVenue, newEventCity, newEventDate, newEventOpenDate]);
 
   const faceValueAgorot = Math.round(Number(faceValue || 0) * 100);
   const priceAgorot = Math.round(Number(price || 0) * 100);
@@ -218,7 +220,7 @@ export function SellWizard() {
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-sm text-ink-900 truncate">{e.nameHe}</p>
                   <p className="text-[11px] text-ink-500">
-                    {fmtDate(e.startsAt)} · {e.venue.city}
+                    {fmtEventDate(e)} · {e.venue.city}
                   </p>
                 </div>
                 {selectedEvent?.id === e.id && <CheckCircle2 size={20} className="text-brand flex-shrink-0" />}
@@ -277,27 +279,46 @@ export function SellWizard() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <label className="tap flex items-center gap-2.5 rounded-xl bg-ink-50 border border-ink-900/10 px-4 py-3">
                   <input
-                    type="date"
-                    value={newEventDate}
-                    onChange={(e) => setNewEventDate(e.target.value)}
-                    dir="ltr"
-                    className="w-full rounded-xl bg-ink-50 border border-ink-900/10 px-3 h-11 text-sm outline-none"
+                    type="checkbox"
+                    checked={newEventOpenDate}
+                    onChange={(e) => setNewEventOpenDate(e.target.checked)}
+                    className="h-4 w-4 accent-brand flex-shrink-0"
                   />
-                  <input
-                    type="time"
-                    value={newEventTime}
-                    onChange={(e) => setNewEventTime(e.target.value)}
-                    dir="ltr"
-                    className="w-full rounded-xl bg-ink-50 border border-ink-900/10 px-3 h-11 text-sm outline-none"
-                  />
-                </div>
+                  <span className="text-sm">
+                    <span className="font-bold text-ink-900">תאריך פתוח</span>
+                    <span className="block text-[11px] text-ink-500">
+                      לכרטיסים שלא קשורים למועד ספציפי, כמו כניסה לפארק שעשועים או אטרקציה
+                    </span>
+                  </span>
+                </label>
+
+                {!newEventOpenDate && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="date"
+                      value={newEventDate}
+                      onChange={(e) => setNewEventDate(e.target.value)}
+                      dir="ltr"
+                      className="w-full rounded-xl bg-ink-50 border border-ink-900/10 px-3 h-11 text-sm outline-none"
+                    />
+                    <input
+                      type="time"
+                      value={newEventTime}
+                      onChange={(e) => setNewEventTime(e.target.value)}
+                      dir="ltr"
+                      className="w-full rounded-xl bg-ink-50 border border-ink-900/10 px-3 h-11 text-sm outline-none"
+                    />
+                  </div>
+                )}
 
                 {similarEvents.length > 0 && (
                   <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-2">
                     <p className="text-xs font-bold text-amber-800">
-                      נמצאו אירועים דומים באותו מקום ותאריך קרוב — אולי זה בדיוק האירוע שלכם? כדאי לבחור מהרשימה כדי שהכרטיס שלכם יופיע יחד עם כרטיסים אחרים לאותו אירוע.
+                      {newEventOpenDate
+                        ? "נמצאה אטרקציה עם תאריך פתוח באותו מקום — אולי זו בדיוק האטרקציה שלכם? כדאי לבחור מהרשימה כדי שהכרטיס שלכם יופיע יחד עם כרטיסים אחרים לאותה אטרקציה."
+                        : "נמצאו אירועים דומים באותו מקום ותאריך קרוב — אולי זה בדיוק האירוע שלכם? כדאי לבחור מהרשימה כדי שהכרטיס שלכם יופיע יחד עם כרטיסים אחרים לאותו אירוע."}
                     </p>
                     {similarEvents.map((e) => (
                       <button
@@ -312,7 +333,7 @@ export function SellWizard() {
                         <div className="min-w-0 flex-1">
                           <p className="font-bold text-xs text-ink-900 truncate">{e.nameHe}</p>
                           <p className="text-[10px] text-ink-500">
-                            {fmtDate(e.startsAt)} · {e.venue.city}
+                            {fmtEventDate(e)} · {e.venue.city}
                           </p>
                         </div>
                       </button>
@@ -335,14 +356,18 @@ export function SellWizard() {
                       !newEventName.trim() ||
                       !newEventVenue.trim() ||
                       !newEventCity.trim() ||
-                      !newEventDate
+                      (!newEventOpenDate && !newEventDate)
                     }
                     onClick={async () => {
                       setCreateEventError(null);
-                      const startsAt = new Date(`${newEventDate}T${newEventTime || "20:00"}:00`);
-                      if (Number.isNaN(startsAt.getTime())) {
-                        setCreateEventError("תאריך לא תקין");
-                        return;
+                      let startsAtIso: string | undefined;
+                      if (!newEventOpenDate) {
+                        const startsAt = new Date(`${newEventDate}T${newEventTime || "20:00"}:00`);
+                        if (Number.isNaN(startsAt.getTime())) {
+                          setCreateEventError("תאריך לא תקין");
+                          return;
+                        }
+                        startsAtIso = startsAt.toISOString();
                       }
                       setCreatingEvent(true);
                       const res = await createEventAction({
@@ -350,7 +375,8 @@ export function SellWizard() {
                         category: newEventCategory,
                         venueNameHe: newEventVenue.trim(),
                         city: newEventCity.trim(),
-                        startsAt: startsAt.toISOString(),
+                        isOpenDate: newEventOpenDate,
+                        startsAt: startsAtIso,
                       });
                       setCreatingEvent(false);
                       if ("error" in res) {
@@ -495,7 +521,7 @@ export function SellWizard() {
           <div className="bg-white rounded-2xl border border-ink-900/5 shadow-card p-4 space-y-3">
             <Row label="אירוע" value={selectedEvent?.nameHe ?? ""} />
             {selectedEvent && (
-              <Row label="תאריך" value={`${fmtDate(selectedEvent.startsAt)} · ${selectedEvent.venue.city}`} />
+              <Row label="תאריך" value={`${fmtEventDate(selectedEvent)} · ${selectedEvent.venue.city}`} />
             )}
             <Row label="כמות" value={String(quantity)} />
             {section && <Row label="אזור" value={section} />}

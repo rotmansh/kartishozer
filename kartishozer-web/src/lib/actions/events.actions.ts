@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getAppUser } from "@/lib/auth/server";
 import { CATEGORIES } from "@/lib/mock/categories";
-import type { EventItem, CategorySlug } from "@/lib/types";
+import { OPEN_DATE_SENTINEL, type EventItem, type CategorySlug } from "@/lib/types";
 
 type ActionResult<T> = T | { error: string };
 
@@ -27,6 +27,7 @@ export async function searchEventsForSellAction(query: string): Promise<EventIte
       category: event.category as CategorySlug,
       venue: { id: event.venue.id, nameHe: event.venue.nameHe, city: event.venue.city },
       startsAt: event.startsAt.toISOString(),
+      isOpenDate: event.isOpenDate,
       descriptionHe: event.descriptionHe,
       gradient: [event.gradientFrom, event.gradientTo],
       emoji: event.emoji,
@@ -46,17 +47,20 @@ export async function searchEventsForSellAction(query: string): Promise<EventIte
 const findSimilarSchema = z.object({
   venueNameHe: z.string().trim().min(2),
   city: z.string().trim().min(2),
-  date: z.string().min(1), // yyyy-mm-dd, from the form's <input type="date">
+  date: z.string().optional(), // yyyy-mm-dd, from the form's <input type="date"> — absent when isOpenDate
+  isOpenDate: z.boolean().optional().default(false),
 });
 
 /**
  * Run before a seller finalizes "add a new event": looks for events
- * already at the same venue (name+city) within a day of the chosen date.
- * Exact-name matching (createEventAction's own safety net) only catches
- * someone typing the identical event name — two sellers describing the
- * same real show ("עומר אדם" vs "עומר אדם - סיבוב הופעות") wouldn't match
- * that way, and would otherwise end up as two separate, un-comparable
- * listings for what buyers experience as one event. This lets the UI
+ * already at the same venue (name+city) within a day of the chosen date
+ * (or, for an open-date attraction, any other open-date listing at that
+ * venue — there's no date to narrow by). Exact-name matching
+ * (createEventAction's own safety net) only catches someone typing the
+ * identical event name — two sellers describing the same real show
+ * ("עומר אדם" vs "עומר אדם - סיבוב הופעות") wouldn't match that way, and
+ * would otherwise end up as two separate, un-comparable listings for
+ * what buyers experience as one event/attraction. This lets the UI
  * surface likely matches so the seller can pick an existing one instead.
  */
 export async function findSimilarEventsAction(
@@ -64,16 +68,23 @@ export async function findSimilarEventsAction(
 ): Promise<EventItem[]> {
   const parsed = findSimilarSchema.safeParse(input);
   if (!parsed.success) return [];
-  const { venueNameHe, city, date } = parsed.data;
+  const { venueNameHe, city, date, isOpenDate } = parsed.data;
 
-  const dayStart = new Date(`${date}T00:00:00`);
-  if (Number.isNaN(dayStart.getTime())) return [];
-  const rangeStart = new Date(dayStart.getTime() - 24 * 3600 * 1000);
-  const rangeEnd = new Date(dayStart.getTime() + 48 * 3600 * 1000);
+  let dateFilter: { isOpenDate: true } | { startsAt: { gte: Date; lt: Date } };
+  if (isOpenDate) {
+    dateFilter = { isOpenDate: true };
+  } else {
+    if (!date) return [];
+    const dayStart = new Date(`${date}T00:00:00`);
+    if (Number.isNaN(dayStart.getTime())) return [];
+    dateFilter = {
+      startsAt: { gte: new Date(dayStart.getTime() - 24 * 3600 * 1000), lt: new Date(dayStart.getTime() + 48 * 3600 * 1000) },
+    };
+  }
 
   const events = await db.event.findMany({
     where: {
-      startsAt: { gte: rangeStart, lt: rangeEnd },
+      ...dateFilter,
       venue: { nameHe: { contains: venueNameHe, mode: "insensitive" }, city: { contains: city, mode: "insensitive" } },
     },
     include: { venue: true },
@@ -87,19 +98,26 @@ export async function findSimilarEventsAction(
     category: event.category as CategorySlug,
     venue: { id: event.venue.id, nameHe: event.venue.nameHe, city: event.venue.city },
     startsAt: event.startsAt.toISOString(),
+    isOpenDate: event.isOpenDate,
     descriptionHe: event.descriptionHe,
     gradient: [event.gradientFrom, event.gradientTo],
     emoji: event.emoji,
   }));
 }
 
-const createEventSchema = z.object({
-  nameHe: z.string().trim().min(2).max(120),
-  category: z.enum(["concerts", "standup", "theater", "sports", "attractions", "kids"]),
-  venueNameHe: z.string().trim().min(2).max(120),
-  city: z.string().trim().min(2).max(60),
-  startsAt: z.string().datetime().or(z.string().min(1)),
-});
+const createEventSchema = z
+  .object({
+    nameHe: z.string().trim().min(2).max(120),
+    category: z.enum(["concerts", "standup", "theater", "sports", "attractions", "kids"]),
+    venueNameHe: z.string().trim().min(2).max(120),
+    city: z.string().trim().min(2).max(60),
+    isOpenDate: z.boolean().optional().default(false),
+    startsAt: z.string().datetime().or(z.string().min(1)).optional(),
+  })
+  .refine((data) => data.isOpenDate || !!data.startsAt, {
+    message: "תאריך נדרש",
+    path: ["startsAt"],
+  });
 
 /**
  * Lets a seller add the event/attraction themselves when it isn't in the
@@ -120,10 +138,15 @@ export async function createEventAction(
   if (!parsed.success) return { error: "פרטי האירוע לא תקינים — בדקו שכל השדות מלאים" };
   const data = parsed.data;
 
-  const startsAt = new Date(data.startsAt);
-  if (Number.isNaN(startsAt.getTime())) return { error: "תאריך לא תקין" };
-  if (startsAt.getTime() < Date.now() - 24 * 3600 * 1000) {
-    return { error: "לא ניתן להוסיף אירוע שכבר עבר" };
+  let startsAt: Date;
+  if (data.isOpenDate) {
+    startsAt = new Date(OPEN_DATE_SENTINEL);
+  } else {
+    startsAt = new Date(data.startsAt!);
+    if (Number.isNaN(startsAt.getTime())) return { error: "תאריך לא תקין" };
+    if (startsAt.getTime() < Date.now() - 24 * 3600 * 1000) {
+      return { error: "לא ניתן להוסיף אירוע שכבר עבר" };
+    }
   }
 
   const categoryMeta = CATEGORIES.find((c) => c.slug === data.category);
@@ -153,6 +176,7 @@ export async function createEventAction(
       category: data.category as CategorySlug,
       venueId: venue.id,
       startsAt,
+      isOpenDate: data.isOpenDate,
       descriptionHe: "",
       gradientFrom: categoryMeta.gradient[0],
       gradientTo: categoryMeta.gradient[1],
@@ -167,6 +191,7 @@ export async function createEventAction(
     category: event.category as CategorySlug,
     venue: { id: venue.id, nameHe: venue.nameHe, city: venue.city },
     startsAt: event.startsAt.toISOString(),
+    isOpenDate: event.isOpenDate,
     descriptionHe: event.descriptionHe,
     gradient: [event.gradientFrom, event.gradientTo],
     emoji: event.emoji,

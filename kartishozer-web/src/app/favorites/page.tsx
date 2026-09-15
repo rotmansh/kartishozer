@@ -38,6 +38,7 @@ export default async function FavoritesPage() {
         category: event.category as CategorySlug,
         venue: { id: event.venue.id, nameHe: event.venue.nameHe, city: event.venue.city },
         startsAt: event.startsAt.toISOString(),
+        isOpenDate: event.isOpenDate,
         descriptionHe: event.descriptionHe,
         gradient: [event.gradientFrom, event.gradientTo] as [string, string],
         emoji: event.emoji,

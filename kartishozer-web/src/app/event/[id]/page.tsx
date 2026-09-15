@@ -6,7 +6,7 @@ import { getEvent, getListingsByEvent } from "@/lib/queries/catalog";
 import { getCategory } from "@/lib/mock/categories";
 import { getAppUser } from "@/lib/auth/server";
 import { db } from "@/lib/db";
-import { fmtDateLong, fmtTime } from "@/lib/format";
+import { fmtEventDateLong, fmtTime } from "@/lib/format";
 import { TopBar } from "@/components/layout/TopBar";
 import { ListingCard } from "@/components/ListingCard";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -68,12 +68,14 @@ export default async function EventDetailsPage({ params }: Props) {
         <div className="bg-white rounded-3xl shadow-card border border-ink-900/5 p-4 space-y-2.5">
           <div className="flex items-center gap-2.5 text-sm">
             <Calendar size={17} className="text-brand flex-shrink-0" />
-            <span className="text-ink-900 font-bold">{fmtDateLong(event.startsAt)}</span>
+            <span className="text-ink-900 font-bold">{fmtEventDateLong(event)}</span>
           </div>
-          <div className="flex items-center gap-2.5 text-sm">
-            <Clock size={17} className="text-brand flex-shrink-0" />
-            <span className="text-ink-700">{fmtTime(event.startsAt)}</span>
-          </div>
+          {!event.isOpenDate && (
+            <div className="flex items-center gap-2.5 text-sm">
+              <Clock size={17} className="text-brand flex-shrink-0" />
+              <span className="text-ink-700">{fmtTime(event.startsAt)}</span>
+            </div>
+          )}
           <div className="flex items-center gap-2.5 text-sm">
             <MapPin size={17} className="text-brand flex-shrink-0" />
             <span className="text-ink-700">

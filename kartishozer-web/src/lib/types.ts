@@ -31,11 +31,19 @@ export type EventItem = {
   nameHe: string;
   category: CategorySlug;
   venue: Venue;
-  startsAt: string; // ISO date
+  startsAt: string; // ISO date — a fixed sentinel when isOpenDate is true
+  isOpenDate: boolean; // no specific showtime (e.g. a theme park ticket)
   descriptionHe: string;
   gradient: [string, string];
   emoji: string;
 };
+
+// Multiple sellers listing the same open-date attraction (isOpenDate:
+// true) all get upserted with this exact startsAt, so they collide on
+// Event's existing @@unique([nameHe, venueId, startsAt]) and land on one
+// row instead of each getting their own — no separate uniqueness rule
+// needed. Far enough out that startsAt >= now() filters always pass it.
+export const OPEN_DATE_SENTINEL = "2099-01-01T00:00:00.000Z";
 
 export type SellerVerificationLevel = "NONE" | "BASIC" | "FULL";
 
