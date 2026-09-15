@@ -20,6 +20,7 @@ import type { EventItem, CategorySlug } from "@/lib/types";
 import { CATEGORIES } from "@/lib/mock/categories";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/Button";
+import { ShareButton } from "@/components/ShareButton";
 import { cn } from "@/lib/cn";
 
 const MAX_RECOMMENDED_MARKUP = 20; // mirrors admin platform config: max_markup_percent
@@ -145,8 +146,18 @@ export function SellWizard() {
           כרטיסים שסומנו לבדיקה יעלו לאחר אישור מנהל/ת.
         </p>
         <div className="w-full max-w-xs space-y-2.5 pt-2">
+          {selectedEvent && (
+            <ShareButton
+              className="tap w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-brand text-white shadow-pop h-11 text-sm font-bold"
+              title={selectedEvent.nameHe}
+              text={`מוכר/ת כרטיס ל${selectedEvent.nameHe} — ${window.location.origin}/listing/${result.listingId}`}
+              url={`${window.location.origin}/listing/${result.listingId}`}
+            />
+          )}
           <Link href="/profile">
-            <Button fullWidth>לצפייה במודעות שלי</Button>
+            <Button fullWidth variant={selectedEvent ? "outline" : "primary"}>
+              לצפייה במודעות שלי
+            </Button>
           </Link>
           <Link href="/">
             <Button fullWidth variant="outline">

@@ -17,13 +17,30 @@ import { TopBar } from "@/components/layout/TopBar";
 import { SellerBadge } from "@/components/SellerBadge";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { ShareButton } from "@/components/ShareButton";
 
 type Props = { params: { id: string } };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const listing = await getListing(params.id);
   const event = listing ? await getEvent(listing.eventId) : undefined;
-  return { title: event ? `${event.nameHe} | כרטיס חוזר` : "כרטיס חוזר" };
+  const title = event ? `${event.nameHe} | כרטיס חוזר` : "כרטיס חוזר";
+  const description =
+    event && listing
+      ? `כרטיס ל${event.nameHe} ב${event.venue.city} · ${fmtDate(event.startsAt)} · החל מ־${fmtAgorot(
+          listing.priceAgorot
+        )}`
+      : "קונים ומוכרים כרטיסים ביד שנייה — בבטחה.";
+
+  // The actual preview image comes from the sibling opengraph-image.tsx
+  // route — Next wires that in automatically for both openGraph and
+  // twitter cards, no explicit `images` field needed here.
+  return {
+    title,
+    description,
+    openGraph: { title, description },
+    twitter: { card: "summary_large_image", title, description },
+  };
 }
 
 export default async function ListingDetailsPage({ params }: Props) {
@@ -151,6 +168,11 @@ export default async function ListingDetailsPage({ params }: Props) {
           >
             <MessageCircle size={20} className="text-ink-700" />
           </button>
+          <ShareButton
+            iconOnly
+            title={event.nameHe}
+            text={`כרטיס ל${event.nameHe} ב${event.venue.city} · החל מ־${fmtAgorot(listing.priceAgorot)}`}
+          />
           <Link href={`/checkout/${listing.id}`} className="flex-1">
             <Button size="lg" fullWidth>
               קנו עכשיו · {fmtAgorot(totals.totalAgorot)}
