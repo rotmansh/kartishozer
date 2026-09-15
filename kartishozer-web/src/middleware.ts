@@ -29,25 +29,25 @@ const clerkHandler: NextMiddleware = clerkMiddleware(
 // Clerk's own control-flow (redirects to sign-in, not-found rewrites for
 // protect()) is already resolved into a real NextResponse *inside*
 // clerkHandler before it returns — this catch only ever sees a genuine,
-// unexpected failure (e.g. a malformed key slipping past our own
-// sanitization, or a Clerk-internal error). Previously that failure was a
-// raw, unlogged throw: it took the whole site down with Vercel's generic
-// MIDDLEWARE_INVOCATION_FAILED page and left no trace of what actually
-// broke. Logging it here means the real error now shows up in Vercel's
-// Runtime Logs as a plain "[middleware]" console.error, no more guessing
-// from a blank Logs tab. Failing shut (redirect home) on a protected route
-// keeps the fail-closed guarantee — it never lets protected content
-// through — while a public route degrades to "just render the page"
-// instead of crashing outright.
+// unexpected failure (e.g. an invalid secret key, or Clerk's API being
+// briefly unreachable). It ONLY logs and rethrows — it must NOT substitute
+// its own NextResponse (as an earlier version of this file did, returning
+// NextResponse.next() / a redirect on error). Every response Clerk hands
+// back to Next.js carries internal marker headers that later mark the
+// request as "middleware ran"; auth()/currentUser() in any Server
+// Component check for that marker and throw "Clerk: auth() was called but
+// Clerk can't detect usage of clerkMiddleware()" if it's missing. A
+// hand-rolled fallback response has none of that — it silently swapped one
+// crash (a real, logged error) for a second, more confusing one on every
+// page that calls auth()/currentUser(), homepage included. Logging then
+// rethrowing keeps Next.js's own crash handling (still visible to users as
+// before) while finally making the real cause visible in Runtime Logs.
 const middleware: NextMiddleware = async (req: NextRequest, event: NextFetchEvent) => {
   try {
     return await clerkHandler(req, event);
   } catch (err) {
     console.error("[middleware] unexpected Clerk error:", err);
-    if (isProtectedRoute(req)) {
-      return NextResponse.redirect(new URL("/", req.url));
-    }
-    return NextResponse.next();
+    throw err;
   }
 };
 
