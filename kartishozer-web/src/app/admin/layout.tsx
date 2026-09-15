@@ -5,7 +5,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { requireAdminUser } from "@/lib/auth/server";
-import { AdminSidebar, AdminMobileNav } from "@/components/admin/AdminComponents";
+import { AdminSidebar, AdminMobileNav } from "@/components/admin/AdminNav";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   await requireAdminUser();
