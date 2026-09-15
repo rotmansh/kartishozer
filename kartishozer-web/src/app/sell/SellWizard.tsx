@@ -64,7 +64,12 @@ export function SellWizard() {
   const markup = markupPercent(priceAgorot, faceValueAgorot);
   const overMarkup = faceValueAgorot > 0 && markup > MAX_RECOMMENDED_MARKUP;
 
-  const canContinueStep1 = !!selectedEvent || manualEventName.trim().length > 2;
+  // Publishing always requires a real selectedEvent (see handlePublish) —
+  // typing a manual name used to be enough to advance past step 1, letting
+  // someone fill in prices through step 3 only to hit a rejection on the
+  // final "publish" click. Requiring a real selection here surfaces that
+  // limitation immediately instead of after wasted effort.
+  const canContinueStep1 = !!selectedEvent;
   const canContinueStep2 =
     quantity > 0 && faceValueAgorot > 0 && priceAgorot > 0 && !overMarkup;
 
@@ -192,7 +197,7 @@ export function SellWizard() {
             />
             {manualEventName.trim().length > 2 && (
               <p className="text-[11px] text-ink-400 mt-1.5">
-                תמיכה בהוספת אירועים חדשים תגיע בקרוב — כרגע אפשר לפרסם רק לאירוע קיים.
+                תמיכה בהוספת אירועים חדשים תגיע בקרוב — בינתיים חובה לבחור אירוע קיים מהרשימה למעלה כדי להמשיך.
               </p>
             )}
           </div>
