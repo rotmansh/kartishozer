@@ -83,6 +83,14 @@ export async function createOrderAction(listingId: string): Promise<CreateOrderR
       ],
     });
 
+    // A conversation exists for every order from the moment it's paid —
+    // this is how the buyer and seller actually coordinate handing over
+    // the ticket (no file upload/barcode transfer exists yet), so it
+    // can't be something either side has to remember to start.
+    await tx.conversation.create({
+      data: { orderId: created.id, buyerId: user.id, sellerId: listing.vendor.userId },
+    });
+
     return created;
   });
 

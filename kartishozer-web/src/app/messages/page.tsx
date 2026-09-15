@@ -1,51 +1,75 @@
-import { MessageCircle, Clock } from "lucide-react";
+import Link from "next/link";
+import { MessageCircle, UserRound } from "lucide-react";
+import { getAppUser } from "@/lib/auth/server";
+import { getConversationsForUser } from "@/lib/queries/messages";
+import { fmtDate } from "@/lib/format";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
 
-const PLACEHOLDER_THREADS = [
-  { seller: { displayName: "נועה כהן" }, lastMessageHe: "היי! הכרטיסים עדיין זמינים 🙂", when: "אתמול" },
-  { seller: { displayName: "דניאל אברהם" }, lastMessageHe: "מעולה, שולח את הכרטיס עכשיו דרך המערכת", when: "לפני יומיים" },
-];
+export default async function MessagesPage() {
+  const user = await getAppUser();
 
-export default function MessagesPage() {
+  if (!user) {
+    return (
+      <div className="px-4 pt-10">
+        <EmptyState
+          icon={<UserRound size={26} />}
+          title="עדיין לא נכנסתם לחשבון"
+          subtitle="התחברו כדי לראות הודעות על ההזמנות שלכם"
+          action={
+            <Link href="/sign-in">
+              <Button>התחברות / הרשמה</Button>
+            </Link>
+          }
+        />
+      </div>
+    );
+  }
+
+  const conversations = await getConversationsForUser(user.id);
+
   return (
     <div>
       <div className="px-4 pt-4 pb-3">
         <h1 className="text-lg font-black text-ink-900">הודעות</h1>
-        <p className="text-sm text-ink-500 mt-0.5">שיחות בין קונים למוכרים</p>
+        <p className="text-sm text-ink-500 mt-0.5">תיאום מסירת כרטיסים בין קונים למוכרים</p>
       </div>
 
-      <div className="mx-4 mb-4 flex items-center gap-2.5 rounded-2xl bg-brand-50 text-brand-600 p-3.5 text-xs font-bold">
-        <Clock size={16} className="flex-shrink-0" />
-        התכונה בפיתוח — כרגע ניתן לצפות בעיצוב בלבד, שליחת הודעות תושק בהמשך
-      </div>
-
-      <div className="px-4 space-y-2">
-        {PLACEHOLDER_THREADS.map((t, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-3 rounded-2xl bg-white border border-ink-900/5 p-3.5 opacity-70"
-          >
-            <div className="h-11 w-11 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-black flex-shrink-0">
-              {t.seller.displayName.charAt(0)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-bold text-ink-900 truncate">{t.seller.displayName}</p>
-                <span className="text-[10px] text-ink-400 flex-shrink-0">{t.when}</span>
-              </div>
-              <p className="text-xs text-ink-500 truncate mt-0.5">{t.lastMessageHe}</p>
-            </div>
-          </div>
-        ))}
-
-        <div className="flex flex-col items-center justify-center text-center py-10 gap-2">
-          <div className="h-14 w-14 rounded-full bg-ink-100 flex items-center justify-center text-ink-500">
-            <MessageCircle size={24} />
-          </div>
-          <p className="text-xs text-ink-400 max-w-[26ch]">
-            דוגמאות בלבד — הודעות אמיתיות יופיעו כאן כשהתכונה תושק
-          </p>
+      {conversations.length === 0 ? (
+        <div className="px-4">
+          <EmptyState
+            icon={<MessageCircle size={22} />}
+            title="עדיין אין הודעות"
+            subtitle="כשתקנו או תמכרו כרטיס, שיחה עם הצד השני תיפתח כאן אוטומטית"
+          />
         </div>
-      </div>
+      ) : (
+        <div className="px-4 space-y-2">
+          {conversations.map((c) => (
+            <Link
+              key={c.id}
+              href={`/messages/${c.id}`}
+              className="tap flex items-center gap-3 rounded-2xl bg-white border border-ink-900/5 shadow-card p-3.5"
+            >
+              <div className="h-11 w-11 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-black flex-shrink-0">
+                {c.counterpartName.charAt(0)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-ink-900 truncate">{c.counterpartName}</p>
+                  <span className="text-[10px] text-ink-400 flex-shrink-0">
+                    {fmtDate(c.updatedAt.toISOString())}
+                  </span>
+                </div>
+                <p className="text-[11px] text-ink-500 truncate mt-0.5">{c.eventNameHe}</p>
+                <p className="text-xs text-ink-500 truncate mt-0.5">
+                  {c.lastMessage ? c.lastMessage.body : "עוד אין הודעות בשיחה הזו — שלחו את הראשונה"}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

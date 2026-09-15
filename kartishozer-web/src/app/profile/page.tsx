@@ -8,6 +8,7 @@ import {
   HelpCircle,
   ChevronLeft,
   UserRound,
+  MessageCircle,
 } from "lucide-react";
 import { getAppUser } from "@/lib/auth/server";
 import { db } from "@/lib/db";
@@ -49,13 +50,13 @@ export default async function ProfilePage() {
       : Promise.resolve([]),
     db.order.findMany({
       where: { buyerId: user.id },
-      include: { event: true, vendor: true },
+      include: { event: true, vendor: true, conversation: true },
       orderBy: { createdAt: "desc" },
     }),
     user.vendor
       ? db.order.findMany({
           where: { vendorId: user.vendor.id },
-          include: { event: true },
+          include: { event: true, conversation: true },
           orderBy: { createdAt: "desc" },
         })
       : Promise.resolve([]),
@@ -164,22 +165,29 @@ export default async function ProfilePage() {
         ) : (
           <div className="px-4 space-y-3">
             {myOrders.map((o) => (
-              <Link
-                key={o.id}
-                href={`/event/${o.eventId}`}
-                className="tap block rounded-2xl bg-white border border-ink-900/5 shadow-card p-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-ink-900 truncate">{o.event.nameHe}</p>
-                    <p className="text-[11px] text-ink-500 mt-0.5">{fmtDate(o.createdAt.toISOString())}</p>
+              <div key={o.id} className="rounded-2xl bg-white border border-ink-900/5 shadow-card p-4">
+                <Link href={`/event/${o.eventId}`} className="block">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-ink-900 truncate">{o.event.nameHe}</p>
+                      <p className="text-[11px] text-ink-500 mt-0.5">{fmtDate(o.createdAt.toISOString())}</p>
+                    </div>
+                    <Badge tone={ORDER_STATUS_TONE[o.status] ?? "neutral"}>
+                      {ORDER_STATUS_LABELS[o.status] ?? o.status}
+                    </Badge>
                   </div>
-                  <Badge tone={ORDER_STATUS_TONE[o.status] ?? "neutral"}>
-                    {ORDER_STATUS_LABELS[o.status] ?? o.status}
-                  </Badge>
-                </div>
-                <p className="font-black text-ink-900 mt-2">{fmtAgorot(o.totalAgorot)}</p>
-              </Link>
+                  <p className="font-black text-ink-900 mt-2">{fmtAgorot(o.totalAgorot)}</p>
+                </Link>
+                {o.conversation && (
+                  <Link
+                    href={`/messages/${o.conversation.id}`}
+                    className="tap mt-3 pt-3 border-t border-ink-900/5 flex items-center gap-1.5 text-xs font-bold text-brand-600"
+                  >
+                    <MessageCircle size={14} />
+                    תיאום מסירה עם המוכר/ת
+                  </Link>
+                )}
+              </div>
             ))}
           </div>
         )}
@@ -209,6 +217,15 @@ export default async function ProfilePage() {
                     </Badge>
                   </div>
                   <p className="font-black text-ink-900 mt-2">{fmtAgorot(o.priceAgorot)}</p>
+                  {o.conversation && (
+                    <Link
+                      href={`/messages/${o.conversation.id}`}
+                      className="tap mt-3 pt-3 border-t border-ink-900/5 flex items-center gap-1.5 text-xs font-bold text-brand-600"
+                    >
+                      <MessageCircle size={14} />
+                      תיאום מסירה עם הקונה/ת
+                    </Link>
+                  )}
                 </div>
               ))}
             </div>

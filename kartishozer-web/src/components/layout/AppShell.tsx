@@ -5,7 +5,10 @@ import type { ReactNode } from "react";
 import { PreviewBanner } from "./PreviewBanner";
 import { BottomNav } from "./BottomNav";
 
-const NO_NAV_PREFIXES = ["/sign-in", "/sign-up", "/checkout"];
+// "/messages/" (with the trailing slash) matches a specific thread, not
+// the "/messages" list — the thread view needs the full screen height for
+// its own sticky composer, same reasoning as checkout.
+const NO_NAV_PREFIXES = ["/sign-in", "/sign-up", "/checkout", "/messages/"];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();

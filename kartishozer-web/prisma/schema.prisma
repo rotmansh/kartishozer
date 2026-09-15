@@ -31,6 +31,10 @@ model User {
   orders       Order[]
   favorites    Favorite[]
   disputesMade Dispute[] @relation("DisputeRequestedBy")
+
+  conversationsAsBuyer  Conversation[] @relation("ConversationBuyer")
+  conversationsAsSeller Conversation[] @relation("ConversationSeller")
+  sentMessages          Message[]
 }
 
 enum VerificationLevel {
@@ -199,10 +203,41 @@ model Order {
   disputes      Dispute[]
   payouts       Payout[]
   ledgerEntries LedgerEntry[]
+  conversation  Conversation?
 
   @@index([status])
   @@index([buyerId])
   @@index([vendorId])
+}
+
+// One conversation per order — this is delivery-coordination for that
+// specific ticket, not a general inbox. Keeps the model simple (no
+// group chats, no unsolicited messaging) and means every thread already
+// carries its own context (which event, which order) with nothing extra
+// to wire up.
+model Conversation {
+  id        String    @id @default(cuid())
+  orderId   String    @unique
+  order     Order     @relation(fields: [orderId], references: [id])
+  buyerId   String
+  buyer     User      @relation("ConversationBuyer", fields: [buyerId], references: [id])
+  sellerId  String
+  seller    User      @relation("ConversationSeller", fields: [sellerId], references: [id])
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id])
+  body           String
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
 }
 
 // ── Disputes ──────────────────────────────────────────────────
