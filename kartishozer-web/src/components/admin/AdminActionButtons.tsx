@@ -334,9 +334,9 @@ export function ConfigEditor({ entry }: { entry: PlatformConfigEntry }) {
               else setSaved(true);
             })
           }
-          className="rounded px-3 py-1 text-[11px] font-bold bg-[#E8503A]/20 text-[#E8503A] hover:bg-[#E8503A]/30 disabled:opacity-40"
+          className="rounded-lg px-4 py-1.5 text-xs font-bold bg-[#E8503A] text-white hover:bg-[#c9432f] disabled:opacity-40 shadow-sm"
         >
-          {isPending ? "שומר…" : "שמור"}
+          {isPending ? "מאשר…" : "אישור"}
         </button>
       )}
 

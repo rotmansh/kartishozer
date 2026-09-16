@@ -9,6 +9,7 @@ import {
   UserRound,
   MessageCircle,
   LayoutDashboard,
+  Heart,
 } from "lucide-react";
 import { getAppUser, isAdmin } from "@/lib/auth/server";
 import { db } from "@/lib/db";
@@ -76,8 +77,12 @@ export default async function ProfilePage() {
   // "לוח ניהול" only shows for admins — this is the one place a signed-in
   // admin can always get back into /admin without retyping the URL (the
   // admin panel's own "חזרה לאתר" link has no matching way back).
+  // "מועדפים" moved here from the bottom nav — freeing that slot keeps
+  // the nav's item count even, so the floating "מכירה" button sits
+  // exactly in the middle instead of drifting off-center.
   const menuItems = [
     ...(userIsAdmin ? [{ icon: LayoutDashboard, label: "לוח ניהול", href: "/admin" }] : []),
+    { icon: Heart, label: "מועדפים", href: "/favorites" },
     { icon: ShieldQuestion, label: "אימות ואבטחה", href: "/user-profile" },
     { icon: HelpCircle, label: "עזרה ותמיכה", href: "/help" },
   ];

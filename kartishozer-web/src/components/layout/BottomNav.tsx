@@ -2,15 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Search, PlusCircle, Heart, User, MessageCircle } from "lucide-react";
+import { Home, Search, PlusCircle, User, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/cn";
 
+// Kept at 5 items (2 real tabs on each side of the "מכירה" CTA) — an odd
+// count here is what keeps that floating button visually centered.
+// "מועדפים" moved into the profile menu to make room for "הודעות"
+// without breaking that balance.
 const ITEMS = [
   { href: "/", label: "בית", icon: Home, exact: true },
   { href: "/search", label: "חיפוש", icon: Search },
-  { href: "/messages", label: "הודעות", icon: MessageCircle },
   { href: "/sell", label: "מכירה", icon: PlusCircle, cta: true },
-  { href: "/favorites", label: "מועדפים", icon: Heart },
+  { href: "/messages", label: "הודעות", icon: MessageCircle },
   { href: "/profile", label: "פרופיל", icon: User },
 ];
 
