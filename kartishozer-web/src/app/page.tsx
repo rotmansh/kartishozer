@@ -109,44 +109,47 @@ export default async function HomePage() {
     <div className="pb-4">
       {/* Top bar */}
       <div className="px-4 pt-4 pb-3 flex items-center justify-between bg-white">
-        <Logo markSize={32} textClassName="text-lg" />
-        <Link
-          href="/messages"
-          aria-label="הודעות"
-          className="tap h-10 w-10 rounded-full bg-ink-50 border border-ink-900/5 flex items-center justify-center relative"
-        >
-          <MessageCircle size={19} className="text-ink-700" />
-        </Link>
+        <Logo markSize={36} textClassName="text-xl" />
+        {user ? (
+          <p className="text-sm font-bold text-ink-700 whitespace-nowrap">שלום, {user.fullName.split(" ")[0]} 👋</p>
+        ) : (
+          <Link href="/sign-in" className="text-sm font-bold text-brand">
+            התחברות
+          </Link>
+        )}
       </div>
 
       {/* Hero */}
-      <div className="relative">
+      <div
+        className="h-72 relative overflow-hidden bg-ink-900 bg-cover bg-center"
+        style={{ backgroundImage: "url(/hero-concert.jpg)" }}
+      >
         <div
-          className="h-56 relative overflow-hidden bg-ink-900 bg-cover bg-center"
-          style={{ backgroundImage: "url(/hero-concert.jpg)" }}
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(20,16,15,0.4) 0%, rgba(20,16,15,0.3) 45%, rgba(20,16,15,0.9) 100%)",
+          }}
+        />
+        {/* Messages moved here (was in the top bar) now that the greeting sits there instead */}
+        <Link
+          href="/messages"
+          aria-label="הודעות"
+          className="tap absolute top-4 left-4 z-10 h-10 w-10 rounded-full bg-black/25 backdrop-blur flex items-center justify-center"
         >
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(180deg, rgba(20,16,15,0.35) 0%, rgba(20,16,15,0.25) 45%, rgba(20,16,15,0.9) 100%)",
-            }}
-          />
-          <div className="relative h-full flex flex-col justify-center px-4 pb-9">
-            {user && <p className="text-sm text-white/80 font-bold mb-1">שלום, {user.fullName.split(" ")[0]} 👋</p>}
-            <h1 className="text-2xl font-black text-white leading-snug">
-              הדרך החדשה
-              <br />
-              לקנות כרטיסים
-            </h1>
-          </div>
-        </div>
+          <MessageCircle size={19} className="text-white" />
+        </Link>
 
-        {/* Search bar — floats over the bottom edge of the hero photo */}
-        <div className="px-4 -mt-6 relative z-10">
+        <div className="relative h-full flex flex-col items-center justify-center gap-5 px-6 text-center">
+          <h1 className="text-3xl font-black text-white leading-snug">
+            הדרך החדשה
+            <br />
+            לקנות ולמכור כרטיסים
+          </h1>
+
           <Link
             href="/search"
-            className="tap flex items-center gap-2.5 rounded-2xl bg-white border border-ink-900/10 px-4 py-3.5 shadow-card"
+            className="tap w-full max-w-sm flex items-center gap-2.5 rounded-2xl bg-white border border-ink-900/10 px-4 py-3.5 shadow-card"
           >
             <Search size={18} className="text-ink-500 flex-shrink-0" />
             <span className="text-sm text-ink-500">חפשו הופעה, הצגה, אירוע או אמן…</span>
