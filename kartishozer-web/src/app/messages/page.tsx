@@ -6,6 +6,7 @@ import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
+import { NotificationsOptIn } from "@/components/NotificationsOptIn";
 
 export default async function MessagesPage() {
   const user = await getAppUser();
@@ -35,6 +36,8 @@ export default async function MessagesPage() {
         <h1 className="text-lg font-black text-ink-900">הודעות</h1>
         <p className="text-sm text-ink-500 mt-0.5">תיאום מסירת כרטיסים בין קונים למוכרים</p>
       </div>
+
+      <NotificationsOptIn />
 
       {conversations.length === 0 ? (
         <div className="px-4">

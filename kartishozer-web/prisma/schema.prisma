@@ -36,6 +36,7 @@ model User {
   conversationsAsSeller Conversation[] @relation("ConversationSeller")
   sentMessages          Message[]
   eventFavorites        EventFavorite[]
+  pushSubscriptions     PushSubscription[]
 }
 
 enum VerificationLevel {
@@ -269,6 +270,21 @@ model Message {
   createdAt      DateTime     @default(now())
 
   @@index([conversationId])
+}
+
+// One row per browser/device the user granted notification permission on
+// (a phone and a laptop both get their own row) — the Push API's
+// endpoint URL is what a server later POSTs to to trigger a notification.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // ── Disputes ──────────────────────────────────────────────────
