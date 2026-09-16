@@ -10,7 +10,7 @@ import { BottomNav } from "./BottomNav";
 // its own sticky composer, same reasoning as checkout.
 const NO_NAV_PREFIXES = ["/sign-in", "/sign-up", "/checkout", "/messages/"];
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children, unreadCount = 0 }: { children: ReactNode; unreadCount?: number }) {
   const pathname = usePathname();
 
   // The admin back-office is a separate, desktop-oriented tool with its
@@ -24,7 +24,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="app-shell shadow-[0_0_60px_rgba(0,0,0,0.06)]">
       <PreviewBanner />
       <div className={hideNav ? "" : "pb-24"}>{children}</div>
-      {!hideNav && <BottomNav />}
+      {!hideNav && <BottomNav unreadCount={unreadCount} />}
     </div>
   );
 }

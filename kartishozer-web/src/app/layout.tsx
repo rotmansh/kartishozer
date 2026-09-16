@@ -5,6 +5,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { heIL } from "@clerk/localizations";
 import { CLERK_ENABLED, CLERK_PUBLISHABLE_KEY } from "@/lib/auth/config";
 import { AppShell } from "@/components/layout/AppShell";
+import { getAppUser } from "@/lib/auth/server";
+import { getUnreadConversationCount } from "@/lib/queries/messages";
 
 const heebo = Heebo({
   subsets: ["hebrew", "latin"],
@@ -52,17 +54,20 @@ const clerkAppearance = {
   },
 };
 
-function Shell({ children }: { children: React.ReactNode }) {
+async function Shell({ children }: { children: React.ReactNode }) {
+  const user = await getAppUser();
+  const unreadCount = user ? await getUnreadConversationCount(user.id) : 0;
+
   return (
     <html lang="he" dir="rtl" className={heebo.variable}>
       <body className="font-sans antialiased">
-        <AppShell>{children}</AppShell>
+        <AppShell unreadCount={unreadCount}>{children}</AppShell>
       </body>
     </html>
   );
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   if (!CLERK_ENABLED) return <Shell>{children}</Shell>;
 
   return (

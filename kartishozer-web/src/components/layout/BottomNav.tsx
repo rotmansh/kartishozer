@@ -2,18 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Search, PlusCircle, Heart, User } from "lucide-react";
+import { Home, Search, PlusCircle, Heart, User, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const ITEMS = [
   { href: "/", label: "בית", icon: Home, exact: true },
   { href: "/search", label: "חיפוש", icon: Search },
+  { href: "/messages", label: "הודעות", icon: MessageCircle },
   { href: "/sell", label: "מכירה", icon: PlusCircle, cta: true },
   { href: "/favorites", label: "מועדפים", icon: Heart },
   { href: "/profile", label: "פרופיל", icon: User },
 ];
 
-export function BottomNav() {
+export function BottomNav({ unreadCount = 0 }: { unreadCount?: number }) {
   const pathname = usePathname();
 
   return (
@@ -45,11 +46,16 @@ export function BottomNav() {
                 href={item.href}
                 className="tap flex-1 flex flex-col items-center justify-center gap-1 py-2.5 min-w-0"
               >
-                <Icon
-                  size={22}
-                  className={active ? "text-brand" : "text-ink-300"}
-                  strokeWidth={active ? 2.4 : 2}
-                />
+                <span className="relative">
+                  <Icon
+                    size={22}
+                    className={active ? "text-brand" : "text-ink-300"}
+                    strokeWidth={active ? 2.4 : 2}
+                  />
+                  {item.href === "/messages" && unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1.5 h-3.5 w-3.5 rounded-full bg-brand border-2 border-white" />
+                  )}
+                </span>
                 <span className={cn("text-[10px] font-bold", active ? "text-brand" : "text-ink-300")}>
                   {item.label}
                 </span>
