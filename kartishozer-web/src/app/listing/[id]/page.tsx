@@ -61,7 +61,17 @@ export default async function ListingDetailsPage({ params }: Props) {
 
   return (
     <div className="pb-28">
-      <TopBar title="פרטי כרטיס" />
+      <TopBar
+        title="פרטי כרטיס"
+        action={
+          <ShareButton
+            iconOnly
+            title={event.nameHe}
+            text={`כרטיס ל${event.nameHe} ב${event.venue.city} · החל מ־${fmtAgorot(listing.priceAgorot)}`}
+            className="tap h-10 w-10 rounded-full bg-white border border-ink-900/5 flex items-center justify-center"
+          />
+        }
+      />
 
       {/* Event summary */}
       <Link
@@ -177,11 +187,6 @@ export default async function ListingDetailsPage({ params }: Props) {
             >
               <MessageCircle size={20} className="text-ink-700" />
             </button>
-            <ShareButton
-              iconOnly
-              title={event.nameHe}
-              text={`כרטיס ל${event.nameHe} ב${event.venue.city} · החל מ־${fmtAgorot(listing.priceAgorot)}`}
-            />
             <Link href={`/checkout/${listing.id}`} className="flex-1">
               <Button size="lg" fullWidth>
                 קנו עכשיו · {fmtAgorot(totals.totalAgorot)}
