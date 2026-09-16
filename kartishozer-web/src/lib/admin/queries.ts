@@ -356,28 +356,28 @@ const CONFIG_META: Record<string, Omit<PlatformConfigEntry, "key" | "value" | "u
     type: "number",
   },
   payout_delay_days: {
-    label: "ימי עיכוב פייאוט",
+    label: "ימי עיכוב לפני תשלום למוכר",
     description: "כמה ימים לאחר האירוע ישתחרר הכסף למוכר. ברירת מחדל: 3",
     type: "number",
   },
   max_listings_per_vendor_per_day: {
-    label: "מקסימום ליסטינגים למוכר ביום",
+    label: "מקסימום מודעות למוכר ביום",
     description: "מגביל מוכרים מסחריים. ברירת מחדל: 20",
     type: "number",
   },
   risk_auto_approve_threshold: {
     label: "סף אישור אוטומטי (ציון סיכון)",
-    description: "ליסטינגים מתחת לסף זה יאושרו אוטומטית. ברירת מחדל: 20",
+    description: "מודעות מתחת לסף זה יאושרו אוטומטית. ברירת מחדל: 20",
     type: "number",
   },
   risk_manual_review_threshold: {
     label: "סף בדיקה ידנית (ציון סיכון)",
-    description: "ליסטינגים מעל סף זה ישלחו לבדיקה ידנית. ברירת מחדל: 60",
+    description: "מודעות מעל לסף זה יישלחו לבדיקה ידנית. ברירת מחדל: 60",
     type: "number",
   },
   risk_reject_threshold: {
     label: "סף דחייה (ציון סיכון)",
-    description: "ליסטינגים מעל סף זה יידחו אוטומטית. ברירת מחדל: 80",
+    description: "מודעות מעל לסף זה יידחו אוטומטית. ברירת מחדל: 80",
     type: "number",
   },
   maintenance_mode: {

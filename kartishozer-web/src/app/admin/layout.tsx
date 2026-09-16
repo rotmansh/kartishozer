@@ -22,7 +22,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <header className="h-12 flex-shrink-0 border-b border-white/10 flex items-center px-4 md:px-6 gap-3 bg-gray-900">
           <div className="flex items-center gap-2">
             <Image src="/logo-mark.png" alt="" width={20} height={20} className="flex-shrink-0" />
-            <span className="text-xs font-bold text-white/50 whitespace-nowrap">Admin Panel</span>
+            <span className="text-xs font-bold text-white/50 whitespace-nowrap">ממשק ניהול</span>
           </div>
           <div className="flex-1" />
           <Link href="/" className="text-xs text-white/40 hover:text-white/70 whitespace-nowrap">

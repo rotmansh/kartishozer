@@ -62,7 +62,7 @@ export default async function AdminOverviewPage() {
                 href="/admin/listings?status=PENDING_REVIEW"
                 className="text-xs font-bold text-white/80 hover:text-white"
               >
-                {stats.pendingReviewListings} ליסטינגים לבדיקה →
+                {stats.pendingReviewListings} מודעות לבדיקה →
               </Link>
             )}
             {stats.highRiskListings > 0 && (
@@ -70,7 +70,7 @@ export default async function AdminOverviewPage() {
                 href="/admin/listings?riskLevel=HIGH"
                 className="text-xs font-bold text-white/80 hover:text-white"
               >
-                {stats.highRiskListings} ליסטינגים בסיכון גבוה →
+                {stats.highRiskListings} מודעות בסיכון גבוה →
               </Link>
             )}
           </div>
@@ -82,10 +82,10 @@ export default async function AdminOverviewPage() {
           הכנסות — 30 ימים אחרונים
         </p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <AdminStatCard label="GMV" value={fmt(stats.gmv30dAgorot)} icon={TrendingUp} sub={`${stats.totalOrders30d} עסקאות`} />
+          <AdminStatCard label="סך מכירות" value={fmt(stats.gmv30dAgorot)} icon={TrendingUp} sub={`${stats.totalOrders30d} עסקאות`} />
           <AdminStatCard label="הכנסות פלטפורמה" value={fmt(stats.platformRevenue30dAgorot)} icon={BarChart3} />
           <AdminStatCard
-            label="פייאוטים ממתינים"
+            label="תשלומים ממתינים למוכרים"
             value={fmt(stats.pendingPayoutsAgorot)}
             icon={Wallet}
             sub={`${stats.pendingPayoutsCount} תשלומים`}
@@ -101,7 +101,7 @@ export default async function AdminOverviewPage() {
       </section>
 
       <section>
-        <p className="text-xs font-bold text-white/30 uppercase tracking-widest mb-3">ליסטינגים</p>
+        <p className="text-xs font-bold text-white/30 uppercase tracking-widest mb-3">מודעות</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <AdminStatCard label="פעילים" value={stats.activeListings} icon={Check} />
           <AdminStatCard label="לבדיקה" value={stats.pendingReviewListings} icon={Hourglass} alert={stats.pendingReviewListings > 10} />
@@ -122,9 +122,9 @@ export default async function AdminOverviewPage() {
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { href: "/admin/listings?status=PENDING_REVIEW", label: "אשרו ליסטינגים", icon: Ticket },
+          { href: "/admin/listings?status=PENDING_REVIEW", label: "אשרו מודעות", icon: Ticket },
           { href: "/admin/disputes?status=OPEN", label: "פתרו סכסוכים", icon: Gavel },
-          { href: "/admin/payouts?status=PENDING", label: "עבדו פייאוטים", icon: Send },
+          { href: "/admin/payouts?status=PENDING", label: "עבדו תשלומים", icon: Send },
           { href: "/admin/config", label: "הגדרות פלטפורמה", icon: Settings },
         ].map((item) => (
           <Link

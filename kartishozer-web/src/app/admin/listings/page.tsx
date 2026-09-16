@@ -8,7 +8,7 @@ import { getAdminListings } from "@/lib/admin/queries";
 import { AdminPageHeader, AdminFilterTabs, AdminBadge } from "@/components/admin/AdminComponents";
 import { ListingReviewButtons } from "@/components/admin/AdminActionButtons";
 
-export const metadata: Metadata = { title: "ליסטינגים | Admin" };
+export const metadata: Metadata = { title: "מודעות | Admin" };
 
 type Props = { searchParams: Record<string, string> };
 
@@ -43,7 +43,7 @@ export default async function AdminListingsPage({ searchParams }: Props) {
 
   return (
     <div>
-      <AdminPageHeader title="ליסטינגים" count={total}>
+      <AdminPageHeader title="מודעות" count={total}>
         <span className="text-xs text-white/30">ממוינים לפי ציון סיכון</span>
       </AdminPageHeader>
 
@@ -87,7 +87,7 @@ export default async function AdminListingsPage({ searchParams }: Props) {
 
       {items.length === 0 ? (
         <div className="rounded-xl border border-white/10 py-16 text-center">
-          <p className="text-white/30 text-sm">אין ליסטינגים בקטגוריה זו</p>
+          <p className="text-white/30 text-sm">אין מודעות בקטגוריה זו</p>
         </div>
       ) : (
         <div className="rounded-xl border border-white/10 overflow-x-auto">

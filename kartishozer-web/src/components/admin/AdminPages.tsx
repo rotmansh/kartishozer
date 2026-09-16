@@ -122,7 +122,7 @@ export async function PayoutsPage({
 
   return (
     <div>
-      <AdminPageHeader title="פייאוטים" count={total} />
+      <AdminPageHeader title="תשלומים למוכרים" count={total} />
       <AdminFilterTabs
         tabs={[
           { key: undefined, label: "הכל" },
@@ -205,7 +205,7 @@ export async function UsersPage({
         <table className="w-full min-w-[720px] text-right text-xs">
           <thead>
             <tr className="border-b border-white/10 bg-white/5">
-              {["מוכר", "אימות", "ליסטינגים", "הזמנות", "נרשם", "סטטוס", "פעולות"].map((h) => (
+              {["מוכר", "אימות", "מודעות", "הזמנות", "נרשם", "סטטוס", "פעולות"].map((h) => (
                 <th key={h} className="py-3 px-4 font-bold text-white/30 uppercase tracking-wide">
                   {h}
                 </th>
@@ -273,8 +273,8 @@ export async function ConfigPage() {
       <div className="mt-4 rounded-xl border border-[#E8503A]/20 bg-[#E8503A]/5 p-4">
         <p className="text-xs font-bold text-[#E8503A] mb-1">⚠️ שינויים בהגדרות פועלים מיידית</p>
         <p className="text-xs text-white/40">
-          שינוי עמלות ישפיע על כל ליסטינגים חדשים — לא ישפיע על עסקאות קיימות. שינוי סף ריסק ישפיע
-          על ליסטינגים חדשים שעוברים בדיקת סיכון.
+          שינוי עמלות ישפיע על כל מודעות חדשות — לא ישפיע על עסקאות קיימות. שינוי סף סיכון ישפיע
+          על מודעות חדשות שעוברות בדיקת סיכון.
         </p>
       </div>
     </div>

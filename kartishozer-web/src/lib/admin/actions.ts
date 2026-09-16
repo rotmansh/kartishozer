@@ -55,7 +55,7 @@ export async function reviewListingAction(
     where: { id: listingId },
     select: { id: true, status: true, vendorId: true },
   });
-  if (!listing) return { error: "ליסטינג לא נמצא." };
+  if (!listing) return { error: "המודעה לא נמצאה." };
 
   const newStatus =
     decision === "APPROVE" ? "ACTIVE" : decision === "REJECT" ? "REJECTED" : "PENDING_REVIEW";
@@ -184,9 +184,9 @@ export async function processPayoutAction(
     include: { vendor: { select: { bankAccountRef: true, displayName: true } } },
   });
 
-  if (!payout) return { error: "פייאוט לא נמצא." };
+  if (!payout) return { error: "התשלום לא נמצא." };
   if (!["PENDING", "ON_HOLD"].includes(payout.status)) {
-    return { error: `לא ניתן לעבד פייאוט בסטטוס ${payout.status}.` };
+    return { error: `לא ניתן לעבד תשלום בסטטוס ${payout.status}.` };
   }
   if (!payout.vendor.bankAccountRef) {
     return { error: "למוכר אין חשבון בנק מחובר. לא ניתן לבצע העברה." };

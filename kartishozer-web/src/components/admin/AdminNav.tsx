@@ -27,9 +27,9 @@ import {
 
 const NAV: { href: string; icon: LucideIcon; label: string; exact?: boolean }[] = [
   { href: "/admin", icon: LayoutDashboard, label: "סקירה", exact: true },
-  { href: "/admin/listings", icon: Ticket, label: "ליסטינגים" },
+  { href: "/admin/listings", icon: Ticket, label: "מודעות" },
   { href: "/admin/disputes", icon: AlertTriangle, label: "סכסוכים" },
-  { href: "/admin/payouts", icon: Wallet, label: "פייאוטים" },
+  { href: "/admin/payouts", icon: Wallet, label: "תשלומים" },
   { href: "/admin/users", icon: Users, label: "משתמשים" },
   { href: "/admin/config", icon: Settings, label: "הגדרות" },
   { href: "/admin/audit", icon: ScrollText, label: "יומן פעולות" },
