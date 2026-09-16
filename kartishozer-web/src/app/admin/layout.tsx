@@ -3,6 +3,7 @@
 // ============================================================
 
 import type { ReactNode } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { requireAdminUser } from "@/lib/auth/server";
 import { AdminSidebar, AdminMobileNav } from "@/components/admin/AdminNav";
@@ -20,9 +21,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       <div className="flex-1 min-w-0 flex flex-col">
         <header className="h-12 flex-shrink-0 border-b border-white/10 flex items-center px-4 md:px-6 gap-3 bg-gray-900">
           <div className="flex items-center gap-2">
-            <div className="h-5 w-5 rounded bg-[#E8503A] flex items-center justify-center text-white font-black text-[10px] flex-shrink-0">
-              כ
-            </div>
+            <Image src="/logo-mark.png" alt="" width={20} height={20} className="flex-shrink-0" />
             <span className="text-xs font-bold text-white/50 whitespace-nowrap">Admin Panel</span>
           </div>
           <div className="flex-1" />

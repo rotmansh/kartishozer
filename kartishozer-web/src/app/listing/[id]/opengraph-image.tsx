@@ -37,6 +37,10 @@ export default async function Image({ params }: { params: { id: string } }) {
   const event = listing ? await getEvent(listing.eventId) : null;
 
   const fontData = await readFile(join(process.cwd(), "src/assets/fonts/Heebo-Bold.ttf"));
+  // Satori renders outside a browser DOM, so next/image is unusable here —
+  // a base64 data URI is the documented way to embed a local image.
+  const logoMarkData = await readFile(join(process.cwd(), "public/logo-mark.png"));
+  const logoMarkSrc = `data:image/png;base64,${logoMarkData.toString("base64")}`;
 
   const gradient = event ? event.gradient : ["#E8503A", "#F5876F"];
   const title = toVisualOrder(event?.nameHe ?? "כרטיס חוזר");
@@ -62,23 +66,10 @@ export default async function Image({ params }: { params: { id: string } }) {
           fontFamily: "Heebo",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "rgba(255,255,255,0.22)",
-              borderRadius: 20,
-              width: 68,
-              height: 68,
-              fontSize: 34,
-              fontWeight: 700,
-            }}
-          >
-            כ
-          </div>
-          <div style={{ display: "flex", fontSize: 30, opacity: 0.9 }}>{brandLabel}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- Satori has no DOM; next/image can't run here */}
+          <img src={logoMarkSrc} width={64} height={64} alt="" />
+          <div style={{ display: "flex", fontSize: 30, fontWeight: 700 }}>{brandLabel}</div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 18, direction: "rtl" }}>
