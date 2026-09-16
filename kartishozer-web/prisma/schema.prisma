@@ -242,16 +242,21 @@ model Order {
 // carries its own context (which event, which order) with nothing extra
 // to wire up.
 model Conversation {
-  id        String    @id @default(cuid())
-  orderId   String    @unique
-  order     Order     @relation(fields: [orderId], references: [id])
-  buyerId   String
-  buyer     User      @relation("ConversationBuyer", fields: [buyerId], references: [id])
-  sellerId  String
-  seller    User      @relation("ConversationSeller", fields: [sellerId], references: [id])
-  messages  Message[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  orderId          String    @unique
+  order            Order     @relation(fields: [orderId], references: [id])
+  buyerId          String
+  buyer            User      @relation("ConversationBuyer", fields: [buyerId], references: [id])
+  sellerId         String
+  seller           User      @relation("ConversationSeller", fields: [sellerId], references: [id])
+  messages         Message[]
+  // Null means "never opened this conversation" — distinct from having
+  // read it at some specific past time, so a brand-new thread with a
+  // message already in it still counts as unread.
+  buyerLastReadAt  DateTime?
+  sellerLastReadAt DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
 
 model Message {

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { getAppUser, isAdmin } from "@/lib/auth/server";
 import { db } from "@/lib/db";
+import { hasUnreadMessage } from "@/lib/queries/messages";
 import { fmtAgorot, fmtDate } from "@/lib/format";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_TONE } from "@/lib/status-labels";
 import { Button } from "@/components/ui/Button";
@@ -50,13 +51,20 @@ export default async function ProfilePage() {
       : Promise.resolve([]),
     db.order.findMany({
       where: { buyerId: user.id },
-      include: { event: true, vendor: true, conversation: true },
+      include: {
+        event: true,
+        vendor: true,
+        conversation: { include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } } },
+      },
       orderBy: { createdAt: "desc" },
     }),
     user.vendor
       ? db.order.findMany({
           where: { vendorId: user.vendor.id },
-          include: { event: true, conversation: true },
+          include: {
+            event: true,
+            conversation: { include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } } },
+          },
           orderBy: { createdAt: "desc" },
         })
       : Promise.resolve([]),
@@ -191,6 +199,9 @@ export default async function ProfilePage() {
                   >
                     <MessageCircle size={14} />
                     תיאום מסירה עם המוכר/ת
+                    {hasUnreadMessage(o.conversation, user.id) && (
+                      <span className="h-2 w-2 rounded-full bg-brand" />
+                    )}
                   </Link>
                 )}
               </div>
@@ -230,6 +241,9 @@ export default async function ProfilePage() {
                     >
                       <MessageCircle size={14} />
                       תיאום מסירה עם הקונה/ת
+                      {hasUnreadMessage(o.conversation, user.id) && (
+                        <span className="h-2 w-2 rounded-full bg-brand" />
+                      )}
                     </Link>
                   )}
                 </div>

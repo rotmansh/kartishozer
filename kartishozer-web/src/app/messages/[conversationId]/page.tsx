@@ -7,6 +7,7 @@ import { ORDER_STATUS_LABELS, ORDER_STATUS_TONE } from "@/lib/status-labels";
 import { TopBar } from "@/components/layout/TopBar";
 import { Badge } from "@/components/ui/Badge";
 import { MessageComposer } from "@/components/MessageComposer";
+import { MarkConversationRead } from "@/components/MarkConversationRead";
 import { cn } from "@/lib/cn";
 
 export default async function ConversationPage({
@@ -22,6 +23,7 @@ export default async function ConversationPage({
 
   return (
     <div className="flex flex-col min-h-[calc(100dvh-4rem)]">
+      <MarkConversationRead conversationId={conversation.id} />
       <TopBar title={conversation.counterpart.fullName} />
 
       <Link

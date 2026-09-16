@@ -27,6 +27,7 @@ import {
   getListingCount,
   getSoleActiveListingId,
 } from "@/lib/queries/catalog";
+import { getUnreadConversationCount } from "@/lib/queries/messages";
 import { getAppUser } from "@/lib/auth/server";
 import { db } from "@/lib/db";
 import { EventCard } from "@/components/EventCard";
@@ -69,6 +70,8 @@ export default async function HomePage() {
     getNewestListings(4),
     getAppUser(),
   ]);
+
+  const unreadCount = user ? await getUnreadConversationCount(user.id) : 0;
 
   const featuredWithStats = await Promise.all(
     featured.map(async (e) => ({
@@ -138,6 +141,11 @@ export default async function HomePage() {
           className="tap absolute top-4 left-4 z-10 h-10 w-10 rounded-full bg-black/25 backdrop-blur flex items-center justify-center"
         >
           <MessageCircle size={19} className="text-white" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-brand text-white text-[10px] font-black flex items-center justify-center border-2 border-ink-900/40">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
         </Link>
 
         <div className="relative h-full flex flex-col items-center justify-center gap-5 px-6 text-center">

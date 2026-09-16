@@ -3,6 +3,7 @@ import { MessageCircle, UserRound } from "lucide-react";
 import { getAppUser } from "@/lib/auth/server";
 import { getConversationsForUser } from "@/lib/queries/messages";
 import { fmtDate } from "@/lib/format";
+import { cn } from "@/lib/cn";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 
@@ -56,13 +57,21 @@ export default async function MessagesPage() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-bold text-ink-900 truncate">{c.counterpartName}</p>
+                  <p className="text-sm font-bold text-ink-900 truncate flex items-center gap-1.5">
+                    {c.isUnread && <span className="h-2 w-2 rounded-full bg-brand flex-shrink-0" />}
+                    {c.counterpartName}
+                  </p>
                   <span className="text-[10px] text-ink-400 flex-shrink-0">
                     {fmtDate(c.updatedAt.toISOString())}
                   </span>
                 </div>
                 <p className="text-[11px] text-ink-500 truncate mt-0.5">{c.eventNameHe}</p>
-                <p className="text-xs text-ink-500 truncate mt-0.5">
+                <p
+                  className={cn(
+                    "text-xs truncate mt-0.5",
+                    c.isUnread ? "text-ink-900 font-bold" : "text-ink-500"
+                  )}
+                >
                   {c.lastMessage ? c.lastMessage.body : "עוד אין הודעות בשיחה הזו — שלחו את הראשונה"}
                 </p>
               </div>
