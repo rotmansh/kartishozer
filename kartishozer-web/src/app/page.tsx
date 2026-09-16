@@ -9,7 +9,7 @@ import {
   Drama,
   Trophy,
   FerrisWheel,
-  PartyPopper,
+  Gift,
   Calendar,
   CalendarClock,
   CalendarRange,
@@ -39,7 +39,7 @@ const CATEGORY_ICONS = {
   Drama,
   Trophy,
   FerrisWheel,
-  PartyPopper,
+  Gift,
 } as const;
 
 // Softer, single-tone colors for the flatter homepage tiles — deliberately
@@ -52,7 +52,7 @@ const CATEGORY_SOFT_COLOR: Record<string, string> = {
   theater: "#4FBBAE",
   sports: "#5B93D9",
   attractions: "#E5A94A",
-  kids: "#E285AC",
+  vouchers: "#4FAE7C",
 };
 
 const WHEN_TILES: { key: WhenFilter; label: string; icon: LucideIcon; color: string }[] = [

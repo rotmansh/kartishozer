@@ -108,7 +108,7 @@ export async function findSimilarEventsAction(
 const createEventSchema = z
   .object({
     nameHe: z.string().trim().min(2).max(120),
-    category: z.enum(["concerts", "standup", "theater", "sports", "attractions", "kids"]),
+    category: z.enum(["concerts", "standup", "theater", "sports", "attractions", "vouchers"]),
     venueNameHe: z.string().trim().min(2).max(120),
     city: z.string().trim().min(2).max(60),
     isOpenDate: z.boolean().optional().default(false),

@@ -6,7 +6,7 @@ export const CATEGORIES: Category[] = [
   { slug: "theater", labelHe: "הצגות", icon: "Drama", emoji: "🎭", gradient: ["#00B4A6", "#5FE0D4"] },
   { slug: "sports", labelHe: "ספורט", icon: "Trophy", emoji: "🏀", gradient: ["#378ADD", "#7FB7F0"] },
   { slug: "attractions", labelHe: "אטרקציות", icon: "FerrisWheel", emoji: "🎡", gradient: ["#EF9F27", "#FFC96B"] },
-  { slug: "kids", labelHe: "ילדים", icon: "PartyPopper", emoji: "🎪", gradient: ["#E85AA0", "#FFA4CE"] },
+  { slug: "vouchers", labelHe: "שוברים", icon: "Gift", emoji: "🎁", gradient: ["#2E9E6B", "#8FE0B0"] },
 ];
 
 export function getCategory(slug: string): Category | undefined {

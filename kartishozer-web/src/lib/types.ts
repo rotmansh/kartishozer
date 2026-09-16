@@ -10,7 +10,7 @@ export type CategorySlug =
   | "theater"
   | "sports"
   | "attractions"
-  | "kids";
+  | "vouchers";
 
 export type Category = {
   slug: CategorySlug;

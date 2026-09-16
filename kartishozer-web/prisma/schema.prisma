@@ -76,7 +76,7 @@ enum CategorySlug {
   theater
   sports
   attractions
-  kids
+  vouchers
 }
 
 model Venue {

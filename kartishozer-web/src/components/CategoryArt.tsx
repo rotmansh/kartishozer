@@ -98,27 +98,19 @@ function AttractionsArt() {
   );
 }
 
-function KidsArt() {
-  const confetti: [number, number][] = [
-    [30, 150],
-    [55, 130],
-    [250, 140],
-    [270, 165],
-    [20, 180],
-    [280, 110],
-  ];
+function VouchersArt() {
   return (
-    <>
-      <path d="M92,98 Q98,130 86,155" stroke="white" strokeOpacity="0.4" fill="none" strokeWidth="2" />
-      <path d="M150,80 Q156,120 144,150" stroke="white" strokeOpacity="0.4" fill="none" strokeWidth="2" />
-      <path d="M208,100 Q214,130 202,155" stroke="white" strokeOpacity="0.4" fill="none" strokeWidth="2" />
-      <circle cx="92" cy="72" r="25" fill="white" fillOpacity="0.55" />
-      <circle cx="150" cy="52" r="29" fill="white" fillOpacity="0.7" />
-      <circle cx="208" cy="76" r="23" fill="white" fillOpacity="0.5" />
-      {confetti.map(([cx, cy], i) => (
-        <circle key={i} cx={cx} cy={cy} r="3.5" fill="white" fillOpacity="0.6" />
-      ))}
-    </>
+    <g transform="translate(150,105)">
+      <rect x="-72" y="-45" width="144" height="90" rx="14" fill="white" fillOpacity="0.14" />
+      <rect x="-72" y="-45" width="144" height="90" rx="14" fill="none" stroke="white" strokeOpacity="0.45" strokeWidth="3" />
+      <line x1="-18" y1="-45" x2="-18" y2="45" stroke="white" strokeOpacity="0.4" strokeWidth="3" strokeDasharray="6 8" />
+      <circle cx="-18" cy="-45" r="8" fill="black" fillOpacity="0.18" />
+      <circle cx="-18" cy="45" r="8" fill="black" fillOpacity="0.18" />
+      <circle cx="18" cy="0" r="22" fill="white" fillOpacity="0.85" />
+      <g stroke="none" fill="black" fillOpacity="0.28">
+        <polygon points="18,-11 22,-2 31,-2 24,4 26,13 18,7 10,13 12,4 5,-2 14,-2" />
+      </g>
+    </g>
   );
 }
 
@@ -128,7 +120,7 @@ const ART: Record<CategorySlug, () => React.JSX.Element> = {
   theater: TheaterArt,
   sports: SportsArt,
   attractions: AttractionsArt,
-  kids: KidsArt,
+  vouchers: VouchersArt,
 };
 
 export function CategoryArt({ category, className }: { category: CategorySlug; className?: string }) {
