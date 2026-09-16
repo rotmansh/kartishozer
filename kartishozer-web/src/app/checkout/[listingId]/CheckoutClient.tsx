@@ -6,6 +6,7 @@ import {
   CreditCard,
   Smartphone,
   Wallet,
+  WalletCards,
   ShieldCheck,
   CheckCircle2,
   Calendar,
@@ -19,7 +20,7 @@ import { SellerBadge } from "@/components/SellerBadge";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 
-type PaymentMethod = "card" | "bit" | "apple_pay";
+type PaymentMethod = "card" | "bit" | "apple_pay" | "google_pay";
 type Totals = { priceAgorot: number; buyerFeeAgorot: number; totalAgorot: number };
 
 export function CheckoutClient({
@@ -120,6 +121,7 @@ export function CheckoutClient({
             [
               { key: "card", label: "כרטיס אשראי", icon: CreditCard },
               { key: "bit", label: "Bit", icon: Smartphone },
+              { key: "google_pay", label: "Google Pay", icon: WalletCards },
               { key: "apple_pay", label: "Apple Pay", icon: Wallet },
             ] as { key: PaymentMethod; label: string; icon: typeof CreditCard }[]
           ).map((opt) => (
