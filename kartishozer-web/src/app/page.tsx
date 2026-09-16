@@ -32,6 +32,7 @@ import { db } from "@/lib/db";
 import { EventCard } from "@/components/EventCard";
 import { ListingCard } from "@/components/ListingCard";
 import { SectionHeader } from "@/components/SectionHeader";
+import { Logo } from "@/components/Logo";
 
 const CATEGORY_ICONS = {
   Music,
@@ -106,36 +107,54 @@ export default async function HomePage() {
 
   return (
     <div className="pb-4">
-      {/* Header */}
-      <div className="px-4 pt-4 pb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-9 w-9 rounded-2xl bg-brand flex items-center justify-center text-white font-black">כ</div>
-          <div>
-            <p className="text-[11px] text-ink-500 leading-none">
-              {user ? `שלום, ${user.fullName.split(" ")[0]} 👋` : "שלום 👋"}
-            </p>
-            <p className="text-sm font-black text-ink-900 leading-tight">כרטיס חוזר</p>
-          </div>
-        </div>
+      {/* Top bar */}
+      <div className="px-4 pt-4 pb-3 flex items-center justify-between bg-white">
+        <Logo markSize={32} textClassName="text-lg" />
         <Link
           href="/messages"
           aria-label="הודעות"
-          className="tap h-10 w-10 rounded-full bg-white border border-ink-900/5 flex items-center justify-center relative"
+          className="tap h-10 w-10 rounded-full bg-ink-50 border border-ink-900/5 flex items-center justify-center relative"
         >
           <MessageCircle size={19} className="text-ink-700" />
         </Link>
       </div>
 
-      {/* Search bar */}
-      <div className="px-4 mb-5">
-        <Link
-          href="/search"
-          className="tap flex items-center gap-2.5 rounded-2xl bg-white border border-ink-900/10 px-4 py-3.5 shadow-card"
+      {/* Hero */}
+      <div className="relative">
+        <div
+          className="h-56 relative overflow-hidden bg-ink-900 bg-cover bg-center"
+          style={{ backgroundImage: "url(/hero-concert.jpg)" }}
         >
-          <Search size={18} className="text-ink-500 flex-shrink-0" />
-          <span className="text-sm text-ink-500">חפשו הופעה, הצגה, אירוע או אמן…</span>
-        </Link>
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(20,16,15,0.35) 0%, rgba(20,16,15,0.25) 45%, rgba(20,16,15,0.9) 100%)",
+            }}
+          />
+          <div className="relative h-full flex flex-col justify-center px-4 pb-9">
+            {user && <p className="text-sm text-white/80 font-bold mb-1">שלום, {user.fullName.split(" ")[0]} 👋</p>}
+            <h1 className="text-2xl font-black text-white leading-snug">
+              הדרך החדשה
+              <br />
+              לקנות כרטיסים
+            </h1>
+          </div>
+        </div>
+
+        {/* Search bar — floats over the bottom edge of the hero photo */}
+        <div className="px-4 -mt-6 relative z-10">
+          <Link
+            href="/search"
+            className="tap flex items-center gap-2.5 rounded-2xl bg-white border border-ink-900/10 px-4 py-3.5 shadow-card"
+          >
+            <Search size={18} className="text-ink-500 flex-shrink-0" />
+            <span className="text-sm text-ink-500">חפשו הופעה, הצגה, אירוע או אמן…</span>
+          </Link>
+        </div>
       </div>
+
+      <div className="h-5" />
 
       {/* Quick date filters */}
       <div className="mb-6">
