@@ -22,6 +22,7 @@ function toEventItem(event: Event & { venue: Venue }): EventItem {
     descriptionHe: event.descriptionHe,
     gradient: [event.gradientFrom, event.gradientTo],
     emoji: event.emoji,
+    createdAt: event.createdAt.toISOString(),
   };
 }
 

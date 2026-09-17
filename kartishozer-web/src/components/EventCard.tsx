@@ -60,7 +60,7 @@ export function EventCard({
           background: `linear-gradient(135deg, ${event.gradient[0]}, ${event.gradient[1]})`,
         }}
       >
-        <CategoryArt category={event.category} />
+        <CategoryArt category={event.category} eventId={event.id} createdAt={event.createdAt} />
         <button
           onClick={handleToggleFavorite}
           aria-label="הוסף למועדפים"

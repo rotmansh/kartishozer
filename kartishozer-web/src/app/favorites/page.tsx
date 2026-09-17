@@ -42,6 +42,7 @@ export default async function FavoritesPage() {
         descriptionHe: event.descriptionHe,
         gradient: [event.gradientFrom, event.gradientTo] as [string, string],
         emoji: event.emoji,
+        createdAt: event.createdAt.toISOString(),
       },
       minPriceAgorot: await getMinPriceAgorot(event.id),
       listingCount: await getListingCount(event.id),

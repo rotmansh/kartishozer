@@ -54,7 +54,7 @@ export default async function EventDetailsPage({ params }: Props) {
         className="-mt-14 pt-14 pb-8 px-4 text-white relative overflow-hidden"
         style={{ background: `linear-gradient(135deg, ${event.gradient[0]}, ${event.gradient[1]})` }}
       >
-        <CategoryArt category={event.category} />
+        <CategoryArt category={event.category} eventId={event.id} createdAt={event.createdAt} />
         <span className="relative text-4xl block mb-2">{event.emoji}</span>
         {category && (
           <span className="relative inline-block rounded-full bg-black/20 backdrop-blur px-2.5 py-1 text-[11px] font-bold mb-2">

@@ -31,6 +31,7 @@ export async function searchEventsForSellAction(query: string): Promise<EventIte
       descriptionHe: event.descriptionHe,
       gradient: [event.gradientFrom, event.gradientTo],
       emoji: event.emoji,
+      createdAt: event.createdAt.toISOString(),
     }));
   } catch (err) {
     // This runs automatically the instant /sell mounts (SellWizard's
@@ -102,6 +103,7 @@ export async function findSimilarEventsAction(
     descriptionHe: event.descriptionHe,
     gradient: [event.gradientFrom, event.gradientTo],
     emoji: event.emoji,
+    createdAt: event.createdAt.toISOString(),
   }));
 }
 
@@ -195,5 +197,6 @@ export async function createEventAction(
     descriptionHe: event.descriptionHe,
     gradient: [event.gradientFrom, event.gradientTo],
     emoji: event.emoji,
+    createdAt: event.createdAt.toISOString(),
   };
 }

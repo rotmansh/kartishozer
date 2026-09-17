@@ -36,6 +36,7 @@ export type EventItem = {
   descriptionHe: string;
   gradient: [string, string];
   emoji: string;
+  createdAt: string; // ISO date — the cover-art pool version an event is pinned to (see coverArt/rng.ts)
 };
 
 // Multiple sellers listing the same open-date attraction (isOpenDate:
