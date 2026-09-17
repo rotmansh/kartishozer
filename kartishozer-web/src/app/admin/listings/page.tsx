@@ -127,8 +127,8 @@ export default async function AdminListingsPage({ searchParams }: Props) {
                     <td className="py-3 px-4">
                       <p className="font-black text-white/80">{fmt(listing.priceAgorot)}</p>
                       <p className="text-white/30">פנים: {fmt(listing.faceValueAgorot)}</p>
-                      <p className={`font-bold text-[11px] ${listing.markupPercent > 20 ? "text-[#E8503A]" : "text-white/30"}`}>
-                        +{listing.markupPercent}%
+                      <p className={`font-bold text-[11px] ${listing.markupPercent > 0 ? "text-[#E8503A]" : "text-white/30"}`}>
+                        {listing.markupPercent > 0 ? `+${listing.markupPercent}%` : `${listing.markupPercent}%`}
                       </p>
                     </td>
 

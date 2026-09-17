@@ -19,12 +19,40 @@ const createListingSchema = z.object({
 type ActionResult<T = { listingId: string }> = T | { error: string };
 
 /**
+ * Israeli consumer-protection law bars reselling a ticket for more than
+ * its face value (platform/service fees are charged separately at
+ * checkout and aren't part of this comparison) — selling at or below
+ * face value is always allowed. This is a hard legal rule, not a risk
+ * signal to be scored and weighed against other factors, so it's
+ * enforced as its own gate that runs *before* a listing can be created
+ * or have its price edited — not folded into assessListingRisk below,
+ * which only ever sees prices that already passed this check.
+ * max_markup_percent normally stays 0; it exists as a platform-config
+ * escape hatch rather than a hardcoded 0 in case a future, narrower
+ * legal allowance ever needs it.
+ */
+async function checkMarkupAllowed(priceAgorot: number, faceValueAgorot: number): Promise<string | null> {
+  const config = await db.platformConfig.findUnique({ where: { key: "max_markup_percent" } });
+  const maxMarkupPercent = Number(config?.value ?? 0);
+  const maxAllowedPriceAgorot = Math.floor(faceValueAgorot * (1 + maxMarkupPercent / 100));
+
+  if (priceAgorot <= maxAllowedPriceAgorot) return null;
+
+  return maxMarkupPercent > 0
+    ? `על פי חוק, אסור למכור כרטיס ביותר מ-${maxMarkupPercent}% מעל מחיר הפנים. אפשר למכור עד מחיר הפנים המקורי או בפחות ממנו.`
+    : "על פי חוק, אסור למכור כרטיס ביותר ממחיר הפנים המקורי ששולם עבורו. אפשר למכור בדיוק במחיר הפנים או בפחות ממנו.";
+}
+
+/**
  * Very small, real (not fake) risk engine — mirrors the thresholds the
  * admin panel already exposes in PlatformConfig (risk_auto_approve /
  * risk_manual_review / risk_reject). No stolen-ticket detection is
  * possible without uploaded ticket files, so duplicateBarcode /
  * duplicatePdfHash stay false — everything else is computed from real
  * data (this vendor's history, this listing's price vs face value).
+ * Markup itself is no longer scored here — see checkMarkupAllowed,
+ * which runs before this and blocks outright instead of contributing
+ * points toward a "maybe fine, maybe not" score.
  */
 async function assessListingRisk(input: {
   vendorId: string;
@@ -35,28 +63,21 @@ async function assessListingRisk(input: {
   const config = await db.platformConfig.findMany({
     where: {
       key: {
-        in: [
-          "max_markup_percent",
-          "max_listings_per_vendor_per_day",
-          "risk_auto_approve_threshold",
-          "risk_manual_review_threshold",
-          "risk_reject_threshold",
-        ],
+        in: ["max_listings_per_vendor_per_day", "risk_auto_approve_threshold", "risk_manual_review_threshold", "risk_reject_threshold"],
       },
     },
   });
   const cfg = Object.fromEntries(config.map((c) => [c.key, Number(c.value)]));
-  const maxMarkup = cfg.max_markup_percent ?? 20;
   const maxPerDay = cfg.max_listings_per_vendor_per_day ?? 20;
   const autoApprove = cfg.risk_auto_approve_threshold ?? 20;
   const manualReview = cfg.risk_manual_review_threshold ?? 60;
   const reject = cfg.risk_reject_threshold ?? 80;
 
-  const markup =
-    input.faceValueAgorot > 0
-      ? Math.round(((input.priceAgorot - input.faceValueAgorot) / input.faceValueAgorot) * 100)
-      : 0;
-  const suspiciousFaceValue = markup > maxMarkup;
+  // Always false: any listing reaching this point already passed
+  // checkMarkupAllowed. Kept in the schema/admin audit trail rather than
+  // removed — a `true` here after this change would mean the hard gate
+  // was somehow bypassed, which is worth being able to see.
+  const suspiciousFaceValue = false;
 
   const [priorApprovedCount, todayCount] = await Promise.all([
     db.listing.count({ where: { vendorId: input.vendorId, status: { in: ["ACTIVE", "SOLD"] } } }),
@@ -115,6 +136,9 @@ export async function createListingAction(
     // sanity guard against accidental typos (e.g. an extra missing digit)
     return { error: "המחיר נמוך מדי ביחס למחיר הפנים — בדקו שהזנתם נכון" };
   }
+
+  const markupError = await checkMarkupAllowed(data.priceAgorot, data.faceValueAgorot);
+  if (markupError) return { error: markupError };
 
   const event = await db.event.findUnique({ where: { id: data.eventId } });
   if (!event) return { error: "האירוע שנבחר לא נמצא" };
@@ -193,6 +217,11 @@ export async function updateListingAction(
   if (listing.status === "SOLD") return { error: "לא ניתן לערוך כרטיס שכבר נמכר" };
 
   const priceChanged = data.priceAgorot !== listing.priceAgorot;
+
+  if (priceChanged) {
+    const markupError = await checkMarkupAllowed(data.priceAgorot, listing.faceValueAgorot);
+    if (markupError) return { error: markupError };
+  }
 
   const risk = priceChanged
     ? await assessListingRisk({

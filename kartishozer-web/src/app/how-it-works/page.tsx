@@ -11,7 +11,7 @@ async function getDisplayConfig() {
   ]);
   return {
     ...fees,
-    maxMarkupPercent: Number(markupRow?.value ?? 20),
+    maxMarkupPercent: Number(markupRow?.value ?? 0),
     payoutDelayDays: Number(delayRow?.value ?? 3),
   };
 }
@@ -54,8 +54,16 @@ export default async function HowItWorksPage() {
       <div className="px-4 space-y-3 pb-8">
         <Point
           icon={<TrendingDown size={20} />}
-          title={`תקרת מחיר של עד ${cfg.maxMarkupPercent}% מעל מחיר הפנים`}
-          body={`אף מוכר לא יכול לגבות יותר מ-${cfg.maxMarkupPercent}% מעל המחיר המקורי של הכרטיס. מודעה שחורגת מזה מסומנת אוטומטית לבדיקה או נדחית — כדי שקונים לא ישלמו מחירי ספסרות.`}
+          title={
+            cfg.maxMarkupPercent > 0
+              ? `תקרת מחיר של עד ${cfg.maxMarkupPercent}% מעל מחיר הפנים`
+              : "אסור למכור כרטיס מעל מחיר הפנים"
+          }
+          body={
+            cfg.maxMarkupPercent > 0
+              ? `אף מוכר לא יכול לגבות יותר מ-${cfg.maxMarkupPercent}% מעל המחיר המקורי של הכרטיס. מודעה שחורגת מזה נחסמת אוטומטית ולא מתפרסמת — כדי שקונים לא ישלמו מחירי ספסרות.`
+              : "על פי חוק, אף מוכר לא יכול לגבות יותר ממחיר הפנים המקורי של הכרטיס — מכירה בדיוק במחיר הפנים או בפחות ממנו תמיד מותרת. מודעה שחורגת מזה נחסמת אוטומטית בשרת ולא מתפרסמת בכלל. עמלות השירות שלנו מתווספות בנפרד בקופה ואינן חלק מהמחיר הזה."
+          }
         />
 
         <Point

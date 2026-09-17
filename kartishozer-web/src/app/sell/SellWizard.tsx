@@ -23,7 +23,14 @@ import { Button } from "@/components/ui/Button";
 import { ShareButton } from "@/components/ShareButton";
 import { cn } from "@/lib/cn";
 
-const MAX_RECOMMENDED_MARKUP = 20; // mirrors admin platform config: max_markup_percent
+// Mirrors admin platform config: max_markup_percent. Not a
+// recommendation — Israeli consumer-protection law bars reselling a
+// ticket above its face value, and the server enforces this exact
+// number as a hard rule (see checkMarkupAllowed in listings.actions.ts).
+// Kept as 0 here rather than fetched live purely for the sell wizard's
+// instant client-side feedback; the real, authoritative check runs
+// server-side on publish regardless of what this constant says.
+const MAX_LEGAL_MARKUP = 0;
 
 type Step = 1 | 2 | 3;
 
@@ -99,7 +106,7 @@ export function SellWizard() {
   const faceValueAgorot = Math.round(Number(faceValue || 0) * 100);
   const priceAgorot = Math.round(Number(price || 0) * 100);
   const markup = markupPercent(priceAgorot, faceValueAgorot);
-  const overMarkup = faceValueAgorot > 0 && markup > MAX_RECOMMENDED_MARKUP;
+  const overMarkup = faceValueAgorot > 0 && markup > MAX_LEGAL_MARKUP;
 
   // Publishing always requires a real selectedEvent (see handlePublish) —
   // typing a manual name used to be enough to advance past step 1, letting
@@ -469,10 +476,8 @@ export function SellWizard() {
               {overMarkup ? <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" /> : <ShieldCheck size={16} className="flex-shrink-0 mt-0.5" />}
               <span>
                 {overMarkup
-                  ? `המחיר גבוה ב-${markup}% ממחיר הפנים — מעל התקרה המומלצת של ${MAX_RECOMMENDED_MARKUP}%. הורידו את המחיר כדי להמשיך.`
-                  : markup > 0
-                  ? `המחיר גבוה ב-${markup}% ממחיר הפנים — בטווח המקובל.`
-                  : "המחיר שלכם נמוך ממחיר הפנים או שווה לו."}
+                  ? "על פי חוק, אסור למכור כרטיס ביותר ממחיר הפנים המקורי. הורידו את המחיר עד למחיר הפנים או פחות כדי להמשיך."
+                  : "המחיר שלכם נמוך ממחיר הפנים או שווה לו — בהתאם לחוק."}
               </span>
             </div>
           )}

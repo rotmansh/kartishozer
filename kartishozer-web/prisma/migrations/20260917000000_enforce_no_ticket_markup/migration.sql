@@ -1,0 +1,11 @@
+-- Israeli consumer-protection law bars reselling a ticket above its face
+-- value. This config already existed as a *soft* risk-scoring signal
+-- (defaulting to 20%, i.e. sellers could legally-in-app charge up to 20%
+-- over face value) — the app code now enforces it as a hard block
+-- instead, but that only matters if the stored value itself is actually
+-- 0. Force it here rather than relying on it never having been written:
+-- a fresh install falls back to the new "0" code default anyway (see
+-- getDefaultValue in src/lib/admin/queries.ts), but this environment's
+-- PlatformConfig table already has a row seeded at "20" that a code
+-- default alone would never touch.
+UPDATE "PlatformConfig" SET value = '0' WHERE key = 'max_markup_percent' AND value = '20';

@@ -342,7 +342,8 @@ export async function getAdminVendors(options: {
 const CONFIG_META: Record<string, Omit<PlatformConfigEntry, "key" | "value" | "updatedAt" | "updatedById">> = {
   max_markup_percent: {
     label: "תקרת מחיר מעל פנים (%)",
-    description: "האחוז המקסימלי שמוכר יכול לגבות מעל מחיר הפנים. ברירת מחדל: 20",
+    description:
+      "אכיפה קשיחה, לא רק המלצה — מודעה שחורגת ממנה נחסמת בשרת ולא נוצרת בכלל. על פי חוק, ברירת המחדל היא 0 (אסור למכור מעל מחיר הפנים).",
     type: "number",
   },
   buyer_fee_percent: {
@@ -409,7 +410,7 @@ export async function getPlatformConfig(): Promise<PlatformConfigEntry[]> {
 
 function getDefaultValue(key: string): string {
   const defaults: Record<string, string> = {
-    max_markup_percent: "20",
+    max_markup_percent: "0",
     buyer_fee_percent: "10",
     seller_fee_percent: "7",
     payout_delay_days: "3",
