@@ -295,11 +295,9 @@ export function SellWizard() {
                     onChange={(e) => setNewEventOpenDate(e.target.checked)}
                     className="h-4 w-4 accent-brand flex-shrink-0"
                   />
-                  <span className="text-sm">
-                    <span className="font-bold text-ink-900">תאריך פתוח</span>
-                    <span className="block text-[11px] text-ink-500">
-                      לכרטיסים שלא קשורים למועד ספציפי, כמו כניסה לפארק שעשועים או אטרקציה
-                    </span>
+                  <span className="text-sm font-bold text-ink-900">תאריך פתוח</span>
+                  <span className="block text-[11px] text-ink-500">
+                    לכרטיסים שלא קשורים למועד ספציפי, כמו כניסה לפארק שעשועים או אטרקציה
                   </span>
                 </label>
 
@@ -415,17 +413,23 @@ export function SellWizard() {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-ink-500 block mb-2">כמות כרטיסים</label>
-            <div className="flex items-center gap-4">
+            <p className="text-xs font-bold text-ink-500 mb-2">כמות כרטיסים</p>
+            <div className="flex items-center gap-4" role="group" aria-label="כמות כרטיסים">
               <button
+                type="button"
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                aria-label="הפחתת כמות"
                 className="tap h-11 w-11 rounded-2xl bg-ink-100 flex items-center justify-center"
               >
                 <Minus size={18} />
               </button>
-              <span className="text-lg font-black text-ink-900 w-8 text-center">{quantity}</span>
+              <span className="text-lg font-black text-ink-900 w-8 text-center" aria-live="polite">
+                {quantity}
+              </span>
               <button
+                type="button"
                 onClick={() => setQuantity((q) => Math.min(10, q + 1))}
+                aria-label="הוספת כמות"
                 className="tap h-11 w-11 rounded-2xl bg-ink-100 flex items-center justify-center"
               >
                 <Plus size={18} />
@@ -434,8 +438,11 @@ export function SellWizard() {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-ink-500 block mb-2">אזור / שורה (אופציונלי)</label>
+            <label htmlFor="listing-section" className="text-xs font-bold text-ink-500 block mb-2">
+              אזור / שורה (אופציונלי)
+            </label>
             <input
+              id="listing-section"
               value={section}
               onChange={(e) => setSection(e.target.value)}
               placeholder="לדוגמה: יציע מזרחי, שורה 12"
@@ -445,8 +452,11 @@ export function SellWizard() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-bold text-ink-500 block mb-2">מחיר פנים (₪)</label>
+              <label htmlFor="listing-face-value" className="text-xs font-bold text-ink-500 block mb-2">
+                מחיר פנים (₪)
+              </label>
               <input
+                id="listing-face-value"
                 value={faceValue}
                 onChange={(e) => setFaceValue(e.target.value.replace(/[^0-9.]/g, ""))}
                 inputMode="decimal"
@@ -456,8 +466,11 @@ export function SellWizard() {
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-ink-500 block mb-2">המחיר שלכם (₪)</label>
+              <label htmlFor="listing-price" className="text-xs font-bold text-ink-500 block mb-2">
+                המחיר שלכם (₪)
+              </label>
               <input
+                id="listing-price"
                 value={price}
                 onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ""))}
                 inputMode="decimal"
@@ -485,6 +498,9 @@ export function SellWizard() {
           )}
 
           <button
+            type="button"
+            role="switch"
+            aria-checked={safePass}
             onClick={() => setSafePass((v) => !v)}
             className="w-full flex items-center justify-between rounded-2xl bg-white border border-ink-900/10 p-4"
           >
@@ -506,6 +522,9 @@ export function SellWizard() {
           </button>
 
           <button
+            type="button"
+            role="switch"
+            aria-checked={officialTransfer}
             onClick={() => setOfficialTransfer((v) => !v)}
             className="w-full flex items-center justify-between rounded-2xl bg-white border border-ink-900/10 p-4"
           >
@@ -532,8 +551,11 @@ export function SellWizard() {
           </button>
 
           <div>
-            <label className="text-xs font-bold text-ink-500 block mb-2">הערה לקונה/ה (אופציונלי)</label>
+            <label htmlFor="listing-note" className="text-xs font-bold text-ink-500 block mb-2">
+              הערה לקונה/ה (אופציונלי)
+            </label>
             <textarea
+              id="listing-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={3}

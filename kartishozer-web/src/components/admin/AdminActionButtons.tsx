@@ -34,7 +34,7 @@ export function ListingReviewButtons({
   if (done) return <span className="text-[11px] font-bold text-[#00B4A6]">{done} ✓</span>;
 
   if (!["PENDING_REVIEW", "ACTIVE", "REJECTED"].includes(currentStatus)) {
-    return <span className="text-white/20 text-[11px]">—</span>;
+    return <span className="text-white/50 text-[11px]">—</span>;
   }
 
   async function act(decision: "APPROVE" | "REJECT" | "REQUEST_INFO") {

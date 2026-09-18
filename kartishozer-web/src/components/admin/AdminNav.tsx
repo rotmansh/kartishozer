@@ -51,7 +51,7 @@ export function AdminSidebar() {
   return (
     <aside className="hidden md:flex w-52 flex-shrink-0 bg-gray-900 border-l border-white/10 flex-col">
       <div className="px-4 py-4 border-b border-white/10">
-        <p className="text-xs font-black text-white/30 uppercase tracking-widest">
+        <p className="text-xs font-black text-white/50 uppercase tracking-widest">
           Admin
         </p>
       </div>

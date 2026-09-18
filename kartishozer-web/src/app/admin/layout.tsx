@@ -25,7 +25,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <span className="text-xs font-bold text-white/50 whitespace-nowrap">ממשק ניהול</span>
           </div>
           <div className="flex-1" />
-          <Link href="/" className="text-xs text-white/40 hover:text-white/70 whitespace-nowrap">
+          <Link href="/" className="text-xs text-white/60 hover:text-white/80 whitespace-nowrap">
             חזרה לאתר
           </Link>
         </header>

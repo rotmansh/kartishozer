@@ -116,8 +116,11 @@ export function MyListingRow({ listing }: { listing: MyListing }) {
         <div className="mt-3 pt-3 border-t border-ink-900/5 space-y-2.5">
           <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="text-[11px] font-bold text-ink-500 block mb-1">מחיר (₪)</label>
+              <label htmlFor={`listing-price-${listing.id}`} className="text-[11px] font-bold text-ink-500 block mb-1">
+                מחיר (₪)
+              </label>
               <input
+                id={`listing-price-${listing.id}`}
                 value={price}
                 onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ""))}
                 dir="ltr"
@@ -125,8 +128,11 @@ export function MyListingRow({ listing }: { listing: MyListing }) {
               />
             </div>
             <div>
-              <label className="text-[11px] font-bold text-ink-500 block mb-1">כמות</label>
+              <label htmlFor={`listing-quantity-${listing.id}`} className="text-[11px] font-bold text-ink-500 block mb-1">
+                כמות
+              </label>
               <input
+                id={`listing-quantity-${listing.id}`}
                 type="number"
                 min={1}
                 max={10}

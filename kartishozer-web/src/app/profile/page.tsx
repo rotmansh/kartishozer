@@ -244,7 +244,7 @@ export default async function ProfilePage() {
                   (o.disputes.length > 0 ? (
                     <DisputePanel
                       disputeId={o.disputes[0].id}
-                      role="BUYER"
+                      viewerRole="BUYER"
                       sellerResponse={o.disputes[0].sellerResponse}
                       evidence={o.disputes[0].evidence.map((e) => ({ ...e, createdAt: e.createdAt.toISOString() }))}
                     />
@@ -296,7 +296,7 @@ export default async function ProfilePage() {
                   {o.disputes.length > 0 && (
                     <DisputePanel
                       disputeId={o.disputes[0].id}
-                      role="SELLER"
+                      viewerRole="SELLER"
                       sellerResponse={o.disputes[0].sellerResponse}
                       evidence={o.disputes[0].evidence.map((e) => ({ ...e, createdAt: e.createdAt.toISOString() }))}
                     />

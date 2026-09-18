@@ -49,7 +49,7 @@ export default async function AdminListingsPage({ searchParams }: Props) {
   return (
     <div>
       <AdminPageHeader title="מודעות" count={total}>
-        <span className="text-xs text-white/30">ממוינים לפי ציון סיכון</span>
+        <span className="text-xs text-white/50">ממוינים לפי ציון סיכון</span>
       </AdminPageHeader>
 
       <AdminFilterTabs
@@ -82,7 +82,7 @@ export default async function AdminListingsPage({ searchParams }: Props) {
               "rounded-lg px-3 py-1 text-[11px] font-semibold transition-colors cursor-pointer",
               riskLevel === tab.key || (!riskLevel && !tab.key)
                 ? "bg-[#E8503A]/20 text-[#E8503A]"
-                : "text-white/30 hover:text-white/60",
+                : "text-white/50 hover:text-white/80",
             ].join(" ")}
           >
             {tab.label}
@@ -92,7 +92,7 @@ export default async function AdminListingsPage({ searchParams }: Props) {
 
       {items.length === 0 ? (
         <div className="rounded-xl border border-white/10 py-16 text-center">
-          <p className="text-white/30 text-sm">אין מודעות בקטגוריה זו</p>
+          <p className="text-white/50 text-sm">אין מודעות בקטגוריה זו</p>
         </div>
       ) : (
         <div className="rounded-xl border border-white/10 overflow-x-auto">
@@ -100,7 +100,7 @@ export default async function AdminListingsPage({ searchParams }: Props) {
             <thead>
               <tr className="border-b border-white/10 bg-white/5">
                 {["אירוע", "מוכר", "מחיר / פנים", "סיכון", "דגלים", "סטטוס", "פעולות"].map((h) => (
-                  <th key={h} className="py-3 px-4 font-bold text-white/30 uppercase tracking-wide">
+                  <th key={h} className="py-3 px-4 font-bold text-white/50 uppercase tracking-wide">
                     {h}
                   </th>
                 ))}
@@ -116,10 +116,10 @@ export default async function AdminListingsPage({ searchParams }: Props) {
                   <tr key={listing.id} className="hover:bg-white/3 transition-colors">
                     <td className="py-3 px-4">
                       <p className="font-bold text-white/80 truncate max-w-[160px]">{listing.event.nameHe}</p>
-                      <p className="text-white/30 mt-0.5">
+                      <p className="text-white/50 mt-0.5">
                         {fmtDate(listing.event.startsAt)} · {listing.event.city}
                       </p>
-                      <p className="text-white/20 mt-0.5 font-mono text-[10px]">{listing.id.slice(-8)}</p>
+                      <p className="text-white/50 mt-0.5 font-mono text-[10px]">{listing.id.slice(-8)}</p>
                     </td>
 
                     <td className="py-3 px-4">
@@ -131,8 +131,8 @@ export default async function AdminListingsPage({ searchParams }: Props) {
 
                     <td className="py-3 px-4">
                       <p className="font-black text-white/80">{fmt(listing.priceAgorot)}</p>
-                      <p className="text-white/30">פנים: {fmt(listing.faceValueAgorot)}</p>
-                      <p className={`font-bold text-[11px] ${listing.markupPercent > 0 ? "text-[#E8503A]" : "text-white/30"}`}>
+                      <p className="text-white/50">פנים: {fmt(listing.faceValueAgorot)}</p>
+                      <p className={`font-bold text-[11px] ${listing.markupPercent > 0 ? "text-[#E8503A]" : "text-white/50"}`}>
                         {listing.markupPercent > 0 ? `+${listing.markupPercent}%` : `${listing.markupPercent}%`}
                       </p>
                     </td>
@@ -143,7 +143,7 @@ export default async function AdminListingsPage({ searchParams }: Props) {
                         <span className="font-black text-white/50 text-[11px]">{listing.riskScore}</span>
                       </div>
                       {listing.riskAssessment?.decision && (
-                        <p className="text-white/25 text-[10px] mt-1">{listing.riskAssessment.decision}</p>
+                        <p className="text-white/50 text-[10px] mt-1">{listing.riskAssessment.decision}</p>
                       )}
                     </td>
 
@@ -159,7 +159,7 @@ export default async function AdminListingsPage({ searchParams }: Props) {
                             {f.label}
                           </span>
                         ))}
-                        {flags.length === 0 && <span className="text-white/20 text-[10px]">ללא</span>}
+                        {flags.length === 0 && <span className="text-white/50 text-[10px]">ללא</span>}
                       </div>
                     </td>
 

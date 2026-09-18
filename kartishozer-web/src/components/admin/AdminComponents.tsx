@@ -39,13 +39,13 @@ export function AdminStatCard({
       }}
     >
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-white/40">{label}</p>
+        <p className="text-xs font-semibold text-white/60">{label}</p>
         {Icon && <Icon size={14} color={alert ? "#E8503A" : "rgba(255,255,255,0.2)"} />}
       </div>
       <p className="text-2xl font-black" style={{ color: alert ? "#E8503A" : "#fff" }}>
         {value}
       </p>
-      {sub && <p className="text-xs text-white/30">{sub}</p>}
+      {sub && <p className="text-xs text-white/50">{sub}</p>}
     </div>
   );
 }
@@ -99,7 +99,7 @@ export function AdminPageHeader({
       <div>
         <h1 className="text-xl font-black text-white">{title}</h1>
         {count !== undefined && (
-          <p className="text-xs text-white/30 mt-0.5">{count.toLocaleString()} רשומות</p>
+          <p className="text-xs text-white/50 mt-0.5">{count.toLocaleString()} רשומות</p>
         )}
       </div>
       {children && <div className="flex items-center gap-2">{children}</div>}
@@ -130,12 +130,12 @@ export function AdminFilterTabs({
             href={tab.key ? `${baseHref}?${paramName}=${tab.key}` : baseHref}
             className={[
               "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
-              isActive ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5",
+              isActive ? "bg-white/10 text-white" : "text-white/60 hover:text-white/80 hover:bg-white/5",
             ].join(" ")}
           >
             {tab.label}
             {tab.count !== undefined && (
-              <span className={`mr-1.5 ${isActive ? "text-white/50" : "text-white/20"}`}>{tab.count}</span>
+              <span className={`mr-1.5 ${isActive ? "text-white/50" : "text-white/50"}`}>{tab.count}</span>
             )}
           </Link>
         );

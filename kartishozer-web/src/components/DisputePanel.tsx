@@ -21,19 +21,22 @@ export type DisputeEvidenceItem = {
 
 /**
  * Shared by both the buyer's and the seller's order card in /profile — the
- * only difference is `role`, which decides whether the response box is a
- * read-only display or an editable form. Evidence upload is symmetric for
- * both sides. Rendered only while the dispute is OPEN/UNDER_REVIEW; the
+ * only difference is `viewerRole`, which decides whether the response box
+ * is a read-only display or an editable form. Evidence upload is symmetric
+ * for both sides. Rendered only while the dispute is OPEN/UNDER_REVIEW; the
  * caller (profile page) decides that from the order's own dispute status.
+ * (Named `viewerRole`, not `role` — a plain `role` prop collides with
+ * ESLint's jsx-a11y/aria-role check, which flags any JSX attribute
+ * literally named `role` even on a non-DOM component.)
  */
 export function DisputePanel({
   disputeId,
-  role,
+  viewerRole,
   sellerResponse,
   evidence,
 }: {
   disputeId: string;
-  role: "BUYER" | "SELLER";
+  viewerRole: "BUYER" | "SELLER";
   sellerResponse: string | null;
   evidence: DisputeEvidenceItem[];
 }) {
@@ -119,7 +122,7 @@ export function DisputePanel({
           <p className="text-[10px] font-bold text-ink-500 mb-1">תגובת המוכר/ת:</p>
           <p className="text-xs text-ink-900 whitespace-pre-wrap">{sellerResponse}</p>
         </div>
-      ) : role === "SELLER" ? (
+      ) : viewerRole === "SELLER" ? (
         <div className="space-y-1.5">
           <textarea
             value={responseDraft}

@@ -66,7 +66,7 @@ export async function DisputesPage({
       <div className="space-y-4">
         {items.length === 0 ? (
           <div className="rounded-xl border border-white/10 py-12 text-center">
-            <p className="text-white/30 text-sm">אין סכסוכים 🎉</p>
+            <p className="text-white/50 text-sm">אין סכסוכים 🎉</p>
           </div>
         ) : (
           items.map((dispute) => (
@@ -75,11 +75,11 @@ export async function DisputesPage({
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <AdminBadge value={dispute.status} />
-                    <span className="text-xs text-white/30 font-mono">{dispute.id.slice(-8)}</span>
-                    <span className="text-xs text-white/30">{fmtDt(dispute.createdAt)}</span>
+                    <span className="text-xs text-white/50 font-mono">{dispute.id.slice(-8)}</span>
+                    <span className="text-xs text-white/50">{fmtDt(dispute.createdAt)}</span>
                   </div>
                   <p className="text-sm font-black text-white/80">{dispute.event.nameHe}</p>
-                  <p className="text-xs text-white/40">
+                  <p className="text-xs text-white/60">
                     קונה: {dispute.order.buyerName} ({dispute.order.buyerEmail})
                     {" · "} מוכר: {dispute.vendor.displayName}
                     {" · "} הזמנה: {fmt(dispute.order.totalAgorot)}
@@ -87,7 +87,7 @@ export async function DisputesPage({
                   <p className="text-xs text-white/50 mt-2 rounded bg-white/5 px-3 py-2">{dispute.reason}</p>
                   {dispute.sellerResponse && (
                     <div className="mt-2 rounded bg-white/5 px-3 py-2">
-                      <p className="text-[10px] font-black text-white/30 mb-1">
+                      <p className="text-[10px] font-black text-white/50 mb-1">
                         תגובת מוכר/ת · {fmtDt(dispute.sellerRespondedAt)}
                       </p>
                       <p className="text-xs text-white/50">{dispute.sellerResponse}</p>
@@ -118,9 +118,9 @@ export async function DisputesPage({
 
                 {dispute.resolution && (
                   <div className="w-full sm:w-64 sm:flex-shrink-0 rounded-xl bg-white/5 border border-white/10 p-3">
-                    <p className="text-[11px] font-black text-white/40 mb-1">פתרון</p>
+                    <p className="text-[11px] font-black text-white/60 mb-1">פתרון</p>
                     <p className="text-xs text-white/60">{dispute.resolution}</p>
-                    <p className="text-[10px] text-white/25 mt-1">{fmtDt(dispute.resolvedAt)}</p>
+                    <p className="text-[10px] text-white/50 mt-1">{fmtDt(dispute.resolvedAt)}</p>
                   </div>
                 )}
               </div>
@@ -164,7 +164,7 @@ export async function PayoutsPage({
           <thead>
             <tr className="border-b border-white/10 bg-white/5">
               {["מוכר", "אירוע", "סכום", "טריגר", "מתוזמן", "סטטוס", "פעולות"].map((h) => (
-                <th key={h} className="py-3 px-4 font-bold text-white/30 uppercase tracking-wide">
+                <th key={h} className="py-3 px-4 font-bold text-white/50 uppercase tracking-wide">
                   {h}
                 </th>
               ))}
@@ -181,8 +181,8 @@ export async function PayoutsPage({
                 </td>
                 <td className="py-3 px-4 text-white/50 max-w-[120px] truncate">{payout.order.event.nameHe}</td>
                 <td className="py-3 px-4 font-black text-white/80">{fmt(payout.amountAgorot)}</td>
-                <td className="py-3 px-4 text-white/40">{payout.trigger}</td>
-                <td className="py-3 px-4 text-white/40">{fmtDt(payout.scheduledFor)}</td>
+                <td className="py-3 px-4 text-white/60">{payout.trigger}</td>
+                <td className="py-3 px-4 text-white/60">{fmtDt(payout.scheduledFor)}</td>
                 <td className="py-3 px-4">
                   <AdminBadge value={payout.status} />
                 </td>
@@ -229,7 +229,7 @@ export async function UsersPage({
           <thead>
             <tr className="border-b border-white/10 bg-white/5">
               {["מוכר", "אימות", "מודעות", "הזמנות", "נרשם", "סטטוס", "פעולות"].map((h) => (
-                <th key={h} className="py-3 px-4 font-bold text-white/30 uppercase tracking-wide">
+                <th key={h} className="py-3 px-4 font-bold text-white/50 uppercase tracking-wide">
                   {h}
                 </th>
               ))}
@@ -240,14 +240,14 @@ export async function UsersPage({
               <tr key={vendor.id} className="hover:bg-white/3">
                 <td className="py-3 px-4">
                   <p className="font-bold text-white/80">{vendor.displayName}</p>
-                  <p className="text-white/25 font-mono text-[10px]">{vendor.id.slice(-8)}</p>
+                  <p className="text-white/50 font-mono text-[10px]">{vendor.id.slice(-8)}</p>
                 </td>
                 <td className="py-3 px-4">
                   <AdminBadge value={vendor.verificationLevel ?? "NONE"} />
                 </td>
                 <td className="py-3 px-4 text-white/50">{vendor.listingCount}</td>
                 <td className="py-3 px-4 text-white/50">{vendor.orderCount}</td>
-                <td className="py-3 px-4 text-white/30">{fmtDt(vendor.createdAt).split(",")[0]}</td>
+                <td className="py-3 px-4 text-white/50">{fmtDt(vendor.createdAt).split(",")[0]}</td>
                 <td className="py-3 px-4">
                   <AdminBadge value={vendor.status} />
                 </td>
@@ -281,9 +281,9 @@ export async function ConfigPage() {
           <div key={entry.key} className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-6 px-5 py-4 hover:bg-white/3">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-white/80">{entry.label}</p>
-              <p className="text-xs text-white/30 mt-0.5">{entry.description}</p>
+              <p className="text-xs text-white/50 mt-0.5">{entry.description}</p>
               {entry.updatedAt.getTime() > 0 && (
-                <p className="text-[10px] text-white/20 mt-1">עודכן: {fmtDt(entry.updatedAt)}</p>
+                <p className="text-[10px] text-white/50 mt-1">עודכן: {fmtDt(entry.updatedAt)}</p>
               )}
             </div>
             <div className="sm:flex-shrink-0">
@@ -295,7 +295,7 @@ export async function ConfigPage() {
 
       <div className="mt-4 rounded-xl border border-[#E8503A]/20 bg-[#E8503A]/5 p-4">
         <p className="text-xs font-bold text-[#E8503A] mb-1">⚠️ שינויים בהגדרות פועלים מיידית</p>
-        <p className="text-xs text-white/40">
+        <p className="text-xs text-white/60">
           שינוי עמלות ישפיע על כל מודעות חדשות — לא ישפיע על עסקאות קיימות. שינוי סף סיכון ישפיע
           על מודעות חדשות שעוברות בדיקת סיכון.
         </p>
@@ -328,7 +328,7 @@ export async function AuditPage({
           <thead>
             <tr className="border-b border-white/10 bg-white/5">
               {["תאריך", "פעולה", "סוג", "ID", "משתמש"].map((h) => (
-                <th key={h} className="py-3 px-4 font-bold text-white/30 uppercase tracking-wide">
+                <th key={h} className="py-3 px-4 font-bold text-white/50 uppercase tracking-wide">
                   {h}
                 </th>
               ))}
@@ -337,13 +337,13 @@ export async function AuditPage({
           <tbody className="divide-y divide-white/5">
             {items.map((log) => (
               <tr key={log.id} className="hover:bg-white/3">
-                <td className="py-2.5 px-4 text-white/30 font-mono text-[11px]">{fmtDt(log.createdAt)}</td>
+                <td className="py-2.5 px-4 text-white/50 font-mono text-[11px]">{fmtDt(log.createdAt)}</td>
                 <td className="py-2.5 px-4">
                   <span className="font-bold text-white/70">{log.action}</span>
                 </td>
-                <td className="py-2.5 px-4 text-white/40">{log.resourceType}</td>
-                <td className="py-2.5 px-4 text-white/25 font-mono">{log.resourceId.slice(-10)}</td>
-                <td className="py-2.5 px-4 text-white/30 font-mono text-[10px]">
+                <td className="py-2.5 px-4 text-white/60">{log.resourceType}</td>
+                <td className="py-2.5 px-4 text-white/50 font-mono">{log.resourceId.slice(-10)}</td>
+                <td className="py-2.5 px-4 text-white/50 font-mono text-[10px]">
                   {log.userId === "system" ? "SYSTEM" : log.userId.slice(-8)}
                 </td>
               </tr>

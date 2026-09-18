@@ -45,7 +45,7 @@ export default async function AdminOverviewPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-xl font-black text-white">סקירה כללית</h1>
-        <p className="text-xs text-white/30 mt-1">נתונים בזמן אמת</p>
+        <p className="text-xs text-white/50 mt-1">נתונים בזמן אמת</p>
       </div>
 
       {(stats.openDisputes > 0 || stats.pendingReviewListings > 0 || stats.highRiskListings > 0) && (
@@ -78,7 +78,7 @@ export default async function AdminOverviewPage() {
       )}
 
       <section>
-        <p className="text-xs font-bold text-white/30 uppercase tracking-widest mb-3">
+        <p className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">
           הכנסות — 30 ימים אחרונים
         </p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -101,7 +101,7 @@ export default async function AdminOverviewPage() {
       </section>
 
       <section>
-        <p className="text-xs font-bold text-white/30 uppercase tracking-widest mb-3">מודעות</p>
+        <p className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">מודעות</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <AdminStatCard label="פעילים" value={stats.activeListings} icon={Check} />
           <AdminStatCard label="לבדיקה" value={stats.pendingReviewListings} icon={Hourglass} alert={stats.pendingReviewListings > 10} />
@@ -111,7 +111,7 @@ export default async function AdminOverviewPage() {
       </section>
 
       <section>
-        <p className="text-xs font-bold text-white/30 uppercase tracking-widest mb-3">משתמשים וסכסוכים</p>
+        <p className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">משתמשים וסכסוכים</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <AdminStatCard label="מוכרים" value={stats.totalVendors} icon={Users} />
           <AdminStatCard label="חדשים (7 ימים)" value={stats.newVendors7d} icon={UserPlus} />

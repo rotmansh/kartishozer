@@ -49,13 +49,13 @@ export default async function AdminAnalyticsPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-xl font-black text-white">אנליטיקס</h1>
-        <p className="text-xs text-white/30 mt-1">
+        <p className="text-xs text-white/50 mt-1">
           פעילות ומשפך — נאסף החל מאמצע ספטמבר 2026, אין נתונים לפני כן
         </p>
       </div>
 
       <section>
-        <p className="text-xs font-bold text-white/30 uppercase tracking-widest mb-3">פעילות</p>
+        <p className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">פעילות</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <AdminStatCard label="פעילים (24 שעות)" value={stats.dau} icon={Activity} />
           <AdminStatCard label="פעילים (7 ימים)" value={stats.wau} icon={Activity} />
@@ -65,7 +65,7 @@ export default async function AdminAnalyticsPage() {
       </section>
 
       <section>
-        <p className="text-xs font-bold text-white/30 uppercase tracking-widest mb-3">היצע</p>
+        <p className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">היצע</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <AdminStatCard label="מודעות חדשות (7 ימים)" value={stats.newListings7d} icon={Ticket} />
           <AdminStatCard label="מוכרים ייחודיים (סה״כ)" value={stats.uniqueSellersAllTime} icon={Store} />
@@ -74,7 +74,7 @@ export default async function AdminAnalyticsPage() {
       </section>
 
       <section>
-        <p className="text-xs font-bold text-white/30 uppercase tracking-widest mb-3">ביקוש והמרה — 30 יום</p>
+        <p className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">ביקוש והמרה — 30 יום</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <AdminStatCard label="קונים ייחודיים (סה״כ)" value={stats.uniqueBuyersAllTime} icon={Users} />
           <AdminStatCard label="שווי הזמנה ממוצע" value={stats.aov30dAgorot !== null ? fmtAgorot(stats.aov30dAgorot) : "—"} icon={TrendingUp} />
@@ -84,7 +84,7 @@ export default async function AdminAnalyticsPage() {
       </section>
 
       <section>
-        <p className="text-xs font-bold text-white/30 uppercase tracking-widest mb-3">נאמנות (סה״כ)</p>
+        <p className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">נאמנות (סה״כ)</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <AdminStatCard label="קונים חוזרים" value={stats.repeatBuyers} icon={Repeat} />
           <AdminStatCard label="מוכרים חוזרים" value={stats.repeatSellers} icon={Repeat} />
@@ -92,7 +92,7 @@ export default async function AdminAnalyticsPage() {
       </section>
 
       <section>
-        <p className="text-xs font-bold text-white/30 uppercase tracking-widest mb-3">אמון ובטיחות — 30 יום</p>
+        <p className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">אמון ובטיחות — 30 יום</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <AdminStatCard label="שיעור מחלוקות" value={fmtPercent(stats.disputeRate30dPercent)} icon={Gavel} alert={(stats.disputeRate30dPercent ?? 0) > 5} />
           <AdminStatCard label="שיעור החזרים" value={fmtPercent(stats.refundRate30dPercent)} icon={Undo2} alert={(stats.refundRate30dPercent ?? 0) > 5} />
@@ -100,12 +100,12 @@ export default async function AdminAnalyticsPage() {
       </section>
 
       <section>
-        <p className="text-xs font-bold text-white/30 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+        <p className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3 flex items-center gap-1.5">
           <Compass size={12} />
           מקורות הרשמה מובילים
         </p>
         {stats.topAcquisitionSources.length === 0 ? (
-          <p className="text-xs text-white/30">אין עדיין נתוני ייחוס</p>
+          <p className="text-xs text-white/50">אין עדיין נתוני ייחוס</p>
         ) : (
           <div className="rounded-xl border border-white/10 bg-white/3 divide-y divide-white/5">
             {stats.topAcquisitionSources.map((row) => (
