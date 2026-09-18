@@ -117,6 +117,20 @@ export async function resolveDisputeAction(
       ? Math.round((refundAmountShekel ?? 0) * 100)
       : 0;
 
+  // The seller's actual net proceeds (order total minus both the buyer's
+  // and seller's platform fees) were recorded on this order's ledger the
+  // moment it was paid — the same number the AUTO payout cron pays out
+  // once an order is old enough to trust. Releasing to the seller here
+  // must pay that same figure, never order.totalAgorot (which is what the
+  // *buyer* paid, fees included, and would overpay the seller by both
+  // fees combined).
+  let sellerProceedsAgorot = 0;
+  if (resolution === "RELEASE_TO_SELLER") {
+    const proceeds = await db.ledgerEntry.findFirst({ where: { orderId: order.id, type: "SELLER_PROCEEDS" } });
+    if (!proceeds) return { error: "לא נמצאה רשומת הכנסה למוכר עבור הזמנה זו — לא ניתן לשחרר תשלום." };
+    sellerProceedsAgorot = proceeds.amountAgorot;
+  }
+
   await db.$transaction(async (tx) => {
     await tx.dispute.update({
       where: { id: disputeId },
@@ -141,8 +155,29 @@ export async function resolveDisputeAction(
     });
 
     if (resolution === "RELEASE_TO_SELLER") {
-      await tx.payout.create({
-        data: { orderId: order.id, vendorId: order.vendorId, status: "PENDING", trigger: "MANUAL", amountAgorot: order.totalAgorot },
+      // A payout may already exist here: schedule-payouts creates one the
+      // moment an order turns CONFIRMED, and openDisputeAction puts it
+      // ON_HOLD (rather than deleting it) if the buyer disputes afterwards.
+      // Take that one off hold instead of creating a second payout for the
+      // same order — only create a fresh one if the dispute was raised
+      // before the order ever reached that point.
+      const existingPayout = await tx.payout.findFirst({ where: { orderId: order.id } });
+      if (existingPayout) {
+        await tx.payout.update({
+          where: { id: existingPayout.id },
+          data: { status: "PENDING", failureReason: null },
+        });
+      } else {
+        await tx.payout.create({
+          data: { orderId: order.id, vendorId: order.vendorId, status: "PENDING", trigger: "MANUAL", amountAgorot: sellerProceedsAgorot },
+        });
+      }
+    } else {
+      // Buyer won the dispute — any payout still sitting PENDING/ON_HOLD
+      // for this order must never go out.
+      await tx.payout.updateMany({
+        where: { orderId: order.id, status: { in: ["PENDING", "ON_HOLD"] } },
+        data: { status: "FAILED", failureReason: `בוטל — הסכסוך הוכרע לטובת הקונה (${disputeId})` },
       });
     }
   });
@@ -161,6 +196,8 @@ export async function resolveDisputeAction(
   await auditAdmin(admin.id, "DISPUTE_RESOLVED", "Dispute", disputeId, { resolution, refundAgorot, notes });
 
   revalidatePath("/admin/disputes");
+  revalidatePath("/admin/payouts");
+  revalidatePath("/profile");
   return { success: true };
 }
 

@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MyListingRow } from "@/components/MyListingRow";
 import { SignOutButton } from "@/components/SignOutButton";
+import { OpenDisputeButton } from "@/components/OpenDisputeButton";
 
 export default async function ProfilePage() {
   const user = await getAppUser();
@@ -56,6 +57,7 @@ export default async function ProfilePage() {
         event: true,
         vendor: true,
         conversation: { include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } } },
+        disputes: { where: { status: { in: ["OPEN", "UNDER_REVIEW"] } }, select: { id: true } },
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -209,6 +211,14 @@ export default async function ProfilePage() {
                     )}
                   </Link>
                 )}
+                {["PAID", "CONFIRMED", "TICKET_DELIVERED"].includes(o.status) &&
+                  (o.disputes.length > 0 ? (
+                    <p className="mt-3 pt-3 border-t border-ink-900/5 text-xs font-bold text-accent-600">
+                      פנייה פתוחה — הכסף מוקפא עד לבירור
+                    </p>
+                  ) : (
+                    <OpenDisputeButton orderId={o.id} />
+                  ))}
               </div>
             ))}
           </div>

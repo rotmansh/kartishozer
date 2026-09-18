@@ -34,6 +34,11 @@ export async function GET(req: Request) {
       status: "PAID",
       event: { startsAt: { lte: cutoff } },
       payouts: { none: {} },
+      // Belt-and-suspenders: openDisputeAction already flips the order's
+      // own status away from "PAID" the moment a dispute opens, which on
+      // its own already excludes it here — this just makes that invariant
+      // explicit rather than relying purely on the status filter above.
+      disputes: { none: { status: { in: ["OPEN", "UNDER_REVIEW"] } } },
     },
     select: { id: true, vendorId: true },
   });
