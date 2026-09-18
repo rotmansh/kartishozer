@@ -68,9 +68,10 @@ model Vendor {
   bankAccountRef     String?
   createdAt          DateTime          @default(now())
 
-  listings  Listing[]
-  orders    Order[]
-  payouts   Payout[]
+  listings              Listing[]
+  orders                Order[]
+  payouts               Payout[]
+  riskAssessmentHistory RiskAssessmentEvent[]
 
   @@index([status])
 }
@@ -182,10 +183,11 @@ model Listing {
   createdAt          DateTime      @default(now())
   deletedAt          DateTime?
 
-  riskAssessment ListingRisk?
-  orders         Order[]
-  favorites      Favorite[]
-  ticketFile     TicketFile?
+  riskAssessment        ListingRisk?
+  riskAssessmentHistory RiskAssessmentEvent[]
+  orders                Order[]
+  favorites             Favorite[]
+  ticketFile            TicketFile?
 
   @@index([status])
   @@index([eventId])
@@ -219,6 +221,11 @@ model ListingRisk {
   listingId           String    @unique
   listing             Listing   @relation(fields: [listingId], references: [id])
   decision            String? // APPROVE | REJECT | REQUEST_INFO
+  // Which version of assessListingRisk (see listings.actions.ts) produced
+  // this row — so a future change to the algorithm can never make an old
+  // decision look inexplicable. See also RiskAssessmentEvent below, which
+  // keeps every past assessment instead of only this current one.
+  riskEngineVersion   String    @default("v1")
   totalScore          Int       @default(0)
   duplicateBarcode    Boolean   @default(false)
   duplicatePdfHash    Boolean   @default(false)
@@ -233,6 +240,46 @@ model ListingRisk {
   reviewedById        String?
   reviewedAt          DateTime?
   reviewNotes         String?
+}
+
+// Append-only history of every risk assessment ever computed — ListingRisk
+// above is a single "current state" row per listing (overwritten on every
+// re-assessment), which was silently losing the previous assessment's
+// score/flags on every price or quantity edit. This table is never
+// updated or deleted, only inserted into, once per assessment, so a past
+// decision can always be reconstructed exactly as it was made.
+enum RiskAssessmentTrigger {
+  LISTING_CREATED
+  PRICE_OR_QUANTITY_EDITED
+  DUPLICATE_FILE_DETECTED
+}
+
+model RiskAssessmentEvent {
+  id                  String                @id @default(cuid())
+  listingId           String
+  listing             Listing               @relation(fields: [listingId], references: [id])
+  vendorId            String
+  vendor              Vendor                @relation(fields: [vendorId], references: [id])
+  riskEngineVersion   String
+  trigger             RiskAssessmentTrigger
+  totalScore          Int
+  riskLevel           RiskLevel
+  decision            String
+  duplicateBarcode    Boolean
+  duplicatePdfHash    Boolean
+  suspiciousFaceValue Boolean
+  highRiskAccount     Boolean
+  bulkListingFlag     Boolean
+  repeatEventFlag     Boolean
+  highQuantityFlag    Boolean
+  highValueTicketFlag Boolean
+  pastDisputeFlag     Boolean
+  trustedSellerCredit Boolean
+  createdAt           DateTime              @default(now())
+
+  @@index([listingId])
+  @@index([vendorId])
+  @@index([createdAt])
 }
 
 // ── Orders ────────────────────────────────────────────────────

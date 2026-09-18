@@ -10,12 +10,12 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import type { Prisma } from "@prisma/client";
 import { getAppUser, isAdmin } from "@/lib/auth/server";
 import { getPaymentProvider } from "@/lib/payments/provider.factory";
 import { recordFullRefund } from "@/lib/ledger";
 import { sendDisputeUpdateEmail } from "@/lib/notifications/email";
 import { sendPushForDisputeUpdate } from "@/lib/notifications/push";
+import { writeAuditLog as auditAdmin } from "@/lib/audit";
 
 type ActionResult<T = { success: true }> = T | { error: string };
 
@@ -23,18 +23,6 @@ async function requireAdminActor(): Promise<{ id: string }> {
   const user = await getAppUser();
   if (!user || !(await isAdmin())) throw new Error("אין הרשאה.");
   return user;
-}
-
-async function auditAdmin(
-  adminId: string,
-  action: string,
-  resourceType: string,
-  resourceId: string,
-  metadata: Record<string, unknown> = {}
-) {
-  await db.auditLog.create({
-    data: { action, resourceType, resourceId, userId: adminId, metadata: metadata as Prisma.InputJsonValue },
-  });
 }
 
 // ── Listing: approve / reject / request more info ─────────────
@@ -212,7 +200,14 @@ export async function resolveDisputeAction(
     await recordFullRefund(order.id, refundAgorot, `dispute_${disputeId}`);
   }
 
-  await auditAdmin(admin.id, "DISPUTE_RESOLVED", "Dispute", disputeId, { resolution, refundAgorot, notes });
+  await auditAdmin(admin.id, "DISPUTE_RESOLVED", "Dispute", disputeId, {
+    resolution,
+    refundAgorot,
+    sellerPayoutAgorot,
+    notes,
+    previousDisputeStatus: dispute.status,
+    previousOrderStatus: order.status,
+  });
 
   // Neither side has a reason to keep checking /profile — tell them the
   // outcome directly. isFullRefund also covers a PARTIAL_REFUND resolution
@@ -294,6 +289,7 @@ export async function processPayoutAction(
   await auditAdmin(admin.id, "PAYOUT_PROCESSED", "Payout", payoutId, {
     amountAgorot: payout.amountAgorot,
     vendorId: payout.vendorId,
+    previousStatus: payout.status,
     notes,
   });
 
@@ -314,12 +310,15 @@ export async function holdPayoutAction(input: z.infer<typeof holdPayoutSchema>):
   if (!parsed.success) return { error: "קלט לא תקין" };
   const { payoutId, reason } = parsed.data;
 
+  const payout = await db.payout.findUnique({ where: { id: payoutId }, select: { status: true } });
+  if (!payout) return { error: "התשלום לא נמצא." };
+
   await db.payout.update({
     where: { id: payoutId },
     data: { status: "ON_HOLD", failureReason: reason },
   });
 
-  await auditAdmin(admin.id, "PAYOUT_HELD", "Payout", payoutId, { reason });
+  await auditAdmin(admin.id, "PAYOUT_HELD", "Payout", payoutId, { reason, previousStatus: payout.status });
 
   revalidatePath("/admin/payouts");
   return { success: true };
@@ -341,6 +340,12 @@ export async function updateVendorStatusAction(
   if (!parsed.success) return { error: "קלט לא תקין" };
   const { vendorId, action, reason } = parsed.data;
 
+  const vendor = await db.vendor.findUnique({
+    where: { id: vendorId },
+    select: { status: true, isVerified: true, verificationLevel: true },
+  });
+  if (!vendor) return { error: "המוכר לא נמצא." };
+
   const newStatus = action === "SUSPEND" ? "SUSPENDED" : "ACTIVE";
 
   await db.vendor.update({
@@ -358,7 +363,13 @@ export async function updateVendorStatusAction(
     });
   }
 
-  await auditAdmin(admin.id, `VENDOR_${action}`, "Vendor", vendorId, { newStatus, reason });
+  await auditAdmin(admin.id, `VENDOR_${action}`, "Vendor", vendorId, {
+    newStatus,
+    reason,
+    previousStatus: vendor.status,
+    previousIsVerified: vendor.isVerified,
+    previousVerificationLevel: vendor.verificationLevel,
+  });
 
   revalidatePath("/admin/users");
   return { success: true };
@@ -379,13 +390,18 @@ export async function updatePlatformConfigAction(
   if (!parsed.success) return { error: "קלט לא תקין" };
   const { key, value } = parsed.data;
 
+  const existing = await db.platformConfig.findUnique({ where: { key }, select: { value: true } });
+
   await db.platformConfig.upsert({
     where: { key },
     create: { key, value, updatedById: admin.id },
     update: { value, updatedById: admin.id },
   });
 
-  await auditAdmin(admin.id, "CONFIG_UPDATED", "PlatformConfig", key, { value });
+  await auditAdmin(admin.id, "CONFIG_UPDATED", "PlatformConfig", key, {
+    value,
+    previousValue: existing?.value ?? null,
+  });
 
   revalidatePath("/admin/config");
   return { success: true };

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getAppUser } from "@/lib/auth/server";
 import { getFileStorageProvider } from "@/lib/storage/provider.factory";
+import { RISK_ENGINE_VERSION } from "@/lib/riskEngineVersion";
 
 type ActionResult<T = { success: true }> = T | { error: string };
 
@@ -68,11 +69,41 @@ export async function uploadTicketFileAction(formData: FormData): Promise<Action
     await db.$transaction([
       db.listingRisk.update({
         where: { listingId },
-        data: { duplicatePdfHash: true, totalScore: newScore, decision: "REQUEST_INFO" },
+        data: {
+          duplicatePdfHash: true,
+          totalScore: newScore,
+          decision: "REQUEST_INFO",
+          riskEngineVersion: RISK_ENGINE_VERSION,
+        },
       }),
       db.listing.update({
         where: { id: listingId },
         data: { status: "PENDING_REVIEW", riskLevel: "HIGH", riskScore: newScore },
+      }),
+      // Same P0 fix as listings.actions.ts: this forced override used to
+      // only ever touch the current-state ListingRisk row — the exact
+      // combination of flags that triggered a forced manual review is now
+      // preserved permanently instead of being just another overwrite.
+      db.riskAssessmentEvent.create({
+        data: {
+          listingId,
+          vendorId: listing.vendorId,
+          trigger: "DUPLICATE_FILE_DETECTED",
+          riskEngineVersion: RISK_ENGINE_VERSION,
+          totalScore: newScore,
+          riskLevel: "HIGH",
+          decision: "REQUEST_INFO",
+          duplicateBarcode: risk?.duplicateBarcode ?? false,
+          duplicatePdfHash: true,
+          suspiciousFaceValue: risk?.suspiciousFaceValue ?? false,
+          highRiskAccount: risk?.highRiskAccount ?? false,
+          bulkListingFlag: risk?.bulkListingFlag ?? false,
+          repeatEventFlag: risk?.repeatEventFlag ?? false,
+          highQuantityFlag: risk?.highQuantityFlag ?? false,
+          highValueTicketFlag: risk?.highValueTicketFlag ?? false,
+          pastDisputeFlag: risk?.pastDisputeFlag ?? false,
+          trustedSellerCredit: risk?.trustedSellerCredit ?? false,
+        },
       }),
     ]);
 

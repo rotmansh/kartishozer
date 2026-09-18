@@ -4,7 +4,9 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getAppUser } from "@/lib/auth/server";
-import type { ListingStatus, RiskLevel } from "@prisma/client";
+import { writeAuditLog } from "@/lib/audit";
+import { RISK_ENGINE_VERSION } from "@/lib/riskEngineVersion";
+import type { ListingStatus, RiskLevel, RiskAssessmentTrigger } from "@prisma/client";
 
 const createListingSchema = z.object({
   eventId: z.string().min(1),
@@ -189,6 +191,7 @@ async function assessListingRisk(input: {
     riskLevel,
     status,
     decision,
+    riskEngineVersion: RISK_ENGINE_VERSION,
     duplicateBarcode: false,
     duplicatePdfHash: false,
     suspiciousFaceValue,
@@ -200,6 +203,44 @@ async function assessListingRisk(input: {
     pastDisputeFlag,
     trustedSellerCredit,
   };
+}
+
+/**
+ * Inserts one permanent history row per assessment — never updated, never
+ * deleted. This is what actually fixes the P0 gap: ListingRisk itself
+ * stays a single overwritten "current state" row (admin review UI,
+ * existing call sites, and the risk badge on /admin/listings all still
+ * read from it unchanged), but every score/flag combination that was ever
+ * computed is now preserved here regardless of what overwrites that
+ * current-state row afterwards.
+ */
+async function recordRiskAssessmentEvent(
+  listingId: string,
+  vendorId: string,
+  trigger: RiskAssessmentTrigger,
+  risk: Awaited<ReturnType<typeof assessListingRisk>>
+) {
+  await db.riskAssessmentEvent.create({
+    data: {
+      listingId,
+      vendorId,
+      trigger,
+      riskEngineVersion: risk.riskEngineVersion,
+      totalScore: risk.totalScore,
+      riskLevel: risk.riskLevel,
+      decision: risk.decision,
+      duplicateBarcode: risk.duplicateBarcode,
+      duplicatePdfHash: risk.duplicatePdfHash,
+      suspiciousFaceValue: risk.suspiciousFaceValue,
+      highRiskAccount: risk.highRiskAccount,
+      bulkListingFlag: risk.bulkListingFlag,
+      repeatEventFlag: risk.repeatEventFlag,
+      highQuantityFlag: risk.highQuantityFlag,
+      highValueTicketFlag: risk.highValueTicketFlag,
+      pastDisputeFlag: risk.pastDisputeFlag,
+      trustedSellerCredit: risk.trustedSellerCredit,
+    },
+  });
 }
 
 export async function createListingAction(
@@ -260,6 +301,7 @@ export async function createListingAction(
       riskAssessment: {
         create: {
           decision: risk.decision,
+          riskEngineVersion: risk.riskEngineVersion,
           totalScore: risk.totalScore,
           duplicateBarcode: risk.duplicateBarcode,
           duplicatePdfHash: risk.duplicatePdfHash,
@@ -275,6 +317,8 @@ export async function createListingAction(
       },
     },
   });
+
+  await recordRiskAssessmentEvent(listing.id, vendor.id, "LISTING_CREATED", risk);
 
   revalidatePath("/profile");
   revalidatePath(`/event/${data.eventId}`);
@@ -329,14 +373,30 @@ export async function updateListingAction(
     await promoteVendorIfTrusted(user.vendor.id, user.vendor.verificationLevel, risk.trustedSellerCredit);
   }
 
+  // P0 fix: seller-initiated edits previously overwrote price/quantity/
+  // section/note with zero record of what they replaced. Every field that
+  // actually changed is captured here — never the fields that didn't, so
+  // an edit that only tweaks the note doesn't fill the log with unchanged
+  // price/quantity noise.
+  const newSection = data.section || null;
+  const newNote = data.note || null;
+  const changes: Record<string, { from: unknown; to: unknown }> = {};
+  if (priceChanged) changes.priceAgorot = { from: listing.priceAgorot, to: data.priceAgorot };
+  if (quantityChanged) changes.quantity = { from: listing.quantity, to: data.quantity };
+  if (newSection !== listing.section) changes.section = { from: listing.section, to: newSection };
+  if (newNote !== listing.note) changes.note = { from: listing.note, to: newNote };
+  if (data.isSafePassExchange !== listing.isSafePassExchange) {
+    changes.isSafePassExchange = { from: listing.isSafePassExchange, to: data.isSafePassExchange };
+  }
+
   await db.listing.update({
     where: { id: listing.id },
     data: {
-      section: data.section || null,
+      section: newSection,
       quantity: data.quantity,
       priceAgorot: data.priceAgorot,
       isSafePassExchange: data.isSafePassExchange,
-      note: data.note || null,
+      note: newNote,
       ...(risk && {
         status: risk.status,
         riskScore: risk.totalScore,
@@ -345,11 +405,16 @@ export async function updateListingAction(
     },
   });
 
+  if (Object.keys(changes).length > 0) {
+    await writeAuditLog(user.id, "LISTING_UPDATED", "Listing", listing.id, { changes });
+  }
+
   if (risk) {
     await db.listingRisk.update({
       where: { listingId: listing.id },
       data: {
         decision: risk.decision,
+        riskEngineVersion: risk.riskEngineVersion,
         totalScore: risk.totalScore,
         suspiciousFaceValue: risk.suspiciousFaceValue,
         highRiskAccount: risk.highRiskAccount,
@@ -361,6 +426,7 @@ export async function updateListingAction(
         trustedSellerCredit: risk.trustedSellerCredit,
       },
     });
+    await recordRiskAssessmentEvent(listing.id, user.vendor.id, "PRICE_OR_QUANTITY_EDITED", risk);
   }
 
   revalidatePath("/profile");
@@ -378,6 +444,8 @@ export async function delistListingAction(listingId: string): Promise<ActionResu
   if (listing.status === "SOLD") return { error: "לא ניתן להסיר כרטיס שכבר נמכר" };
 
   await db.listing.update({ where: { id: listingId }, data: { deletedAt: new Date() } });
+
+  await writeAuditLog(user.id, "LISTING_DELISTED", "Listing", listingId, { previousStatus: listing.status });
 
   revalidatePath("/profile");
   return { success: true };
