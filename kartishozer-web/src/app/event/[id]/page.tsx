@@ -6,9 +6,11 @@ import { getEvent, getListingsByEvent } from "@/lib/queries/catalog";
 import { getCategory } from "@/lib/mock/categories";
 import { getAppUser } from "@/lib/auth/server";
 import { db } from "@/lib/db";
+import { computePriceIndex } from "@/lib/types";
 import { fmtEventDateLong, fmtTime } from "@/lib/format";
 import { TopBar } from "@/components/layout/TopBar";
 import { ListingCard } from "@/components/ListingCard";
+import { PriceTransparencyIndex } from "@/components/PriceTransparencyIndex";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { CategoryArt } from "@/components/CategoryArt";
@@ -27,6 +29,7 @@ export default async function EventDetailsPage({ params }: Props) {
 
   const [listings, user] = await Promise.all([getListingsByEvent(event.id), getAppUser()]);
   const category = getCategory(event.category);
+  const priceIndex = computePriceIndex(listings);
 
   const favoriteIds = user
     ? new Set(
@@ -98,6 +101,8 @@ export default async function EventDetailsPage({ params }: Props) {
               {listings.length > 0 && <span className="text-ink-400 font-bold"> · {listings.length}</span>}
             </h2>
           </div>
+
+          {priceIndex && <PriceTransparencyIndex index={priceIndex} />}
 
           {listings.length === 0 ? (
             <EmptyState

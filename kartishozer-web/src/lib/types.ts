@@ -89,3 +89,34 @@ export function markupPercent(priceAgorot: number, faceValueAgorot: number): num
   if (faceValueAgorot <= 0) return 0;
   return Math.round(((priceAgorot - faceValueAgorot) / faceValueAgorot) * 100);
 }
+
+export type PriceIndex = {
+  minPriceAgorot: number;
+  maxPriceAgorot: number;
+  medianMarkupPercent: number;
+  atOrBelowFaceCount: number;
+  totalCount: number;
+};
+
+// Aggregates the currently-active listings for one event into a single
+// "is this a fair market" snapshot — shown once above the listing list
+// instead of making a buyer compare N cards by eye. Deliberately computed
+// from what's on-screen already (no extra query): every consumer of this
+// already fetched the full active-listings array for the event.
+export function computePriceIndex(listings: Pick<Listing, "priceAgorot" | "faceValueAgorot">[]): PriceIndex | null {
+  if (listings.length < 2) return null;
+
+  const prices = listings.map((l) => l.priceAgorot);
+  const markups = listings.map((l) => markupPercent(l.priceAgorot, l.faceValueAgorot)).sort((a, b) => a - b);
+  const mid = Math.floor(markups.length / 2);
+  const medianMarkupPercent =
+    markups.length % 2 === 0 ? Math.round((markups[mid - 1] + markups[mid]) / 2) : markups[mid];
+
+  return {
+    minPriceAgorot: Math.min(...prices),
+    maxPriceAgorot: Math.max(...prices),
+    medianMarkupPercent,
+    atOrBelowFaceCount: markups.filter((m) => m <= 0).length,
+    totalCount: listings.length,
+  };
+}
