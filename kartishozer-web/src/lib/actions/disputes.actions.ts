@@ -25,7 +25,15 @@ const MAX_EVIDENCE_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 async function loadDisputeForParty(disputeId: string, userId: string) {
   const dispute = await db.dispute.findUnique({
     where: { id: disputeId },
-    include: { order: { include: { vendor: { select: { userId: true } } } } },
+    include: {
+      order: {
+        include: {
+          event: { select: { nameHe: true } },
+          buyer: true,
+          vendor: { include: { user: true } },
+        },
+      },
+    },
   });
   const notFound = { error: "הפנייה לא נמצאה" } as const;
   const noAccess = { error: "אין לכם גישה לפנייה זו" } as const;
@@ -188,6 +196,25 @@ export async function sellerRespondToDisputeAction(
   revalidatePath("/profile");
   revalidatePath("/admin/disputes");
 
+  // Only the buyer needs to hear about this — the response text itself
+  // stays in the app (never echoed into an email/push body), same as the
+  // buyer's own dispute reason never appears in the seller's notification.
+  const { buyer, event } = dispute.order;
+  const headline = `המוכר/ת הגיב/ה לפנייה שפתחת על <strong>${event.nameHe}</strong>. אפשר לראות את התגובה בעמוד ההזמנה.`;
+  await Promise.all([
+    sendDisputeUpdateEmail({
+      toEmail: buyer.email,
+      toName: buyer.fullName,
+      subject: `התקבלה תגובה לפנייה שלך — ${event.nameHe}`,
+      headline,
+    }),
+    sendPushForDisputeUpdate({
+      recipientUserId: buyer.id,
+      title: "המוכר/ת הגיב/ה לפנייה",
+      body: event.nameHe,
+    }),
+  ]);
+
   return { success: true };
 }
 
@@ -251,6 +278,29 @@ export async function addDisputeEvidenceAction(formData: FormData): Promise<Acti
 
   revalidatePath("/profile");
   revalidatePath("/admin/disputes");
+
+  // Notify whichever side didn't just upload — never the uploader
+  // themselves, and never the file or its note (an admin only ever reads
+  // evidence from /admin/disputes, so there's no ADMIN-uploader case to
+  // notify a "counterparty" for here).
+  const { buyer, vendor, event } = dispute.order;
+  const recipient = role === "BUYER" ? vendor.user : role === "SELLER" ? buyer : null;
+  if (recipient) {
+    const headline = `נוספה אסמכתא חדשה לפנייה על <strong>${event.nameHe}</strong>. אפשר לראות אותה בעמוד ההזמנה.`;
+    await Promise.all([
+      sendDisputeUpdateEmail({
+        toEmail: recipient.email,
+        toName: recipient.fullName,
+        subject: `נוספה אסמכתא לפנייה — ${event.nameHe}`,
+        headline,
+      }),
+      sendPushForDisputeUpdate({
+        recipientUserId: recipient.id,
+        title: "נוספה אסמכתא לפנייה",
+        body: event.nameHe,
+      }),
+    ]);
+  }
 
   return { success: true };
 }
