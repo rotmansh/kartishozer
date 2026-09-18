@@ -6,6 +6,7 @@ import { heIL } from "@clerk/localizations";
 import { CLERK_ENABLED, CLERK_PUBLISHABLE_KEY } from "@/lib/auth/config";
 import { AppShell } from "@/components/layout/AppShell";
 import { AttributionTracker } from "@/components/AttributionTracker";
+import { AccessibilityWidget } from "@/components/AccessibilityWidget";
 import { getAppUser } from "@/lib/auth/server";
 import { getUnreadConversationCount } from "@/lib/queries/messages";
 import { linkVisitorToUser } from "@/lib/analytics";
@@ -66,6 +67,7 @@ async function Shell({ children }: { children: React.ReactNode }) {
       <body className="font-sans antialiased">
         <AttributionTracker />
         <AppShell unreadCount={unreadCount}>{children}</AppShell>
+        <AccessibilityWidget />
       </body>
     </html>
   );

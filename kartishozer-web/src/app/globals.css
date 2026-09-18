@@ -38,3 +38,30 @@ body {
   transform: scale(0.96);
   opacity: 0.9;
 }
+
+/* Accessibility widget toggles (src/components/AccessibilityWidget.tsx) —
+   real functional effects, applied via classes on <html> so they cover
+   the whole site including content rendered after the widget mounts. */
+html.a11y-font-md {
+  font-size: 112.5%;
+}
+html.a11y-font-lg {
+  font-size: 125%;
+}
+html.a11y-font-xl {
+  font-size: 137.5%;
+}
+html.a11y-high-contrast {
+  filter: contrast(1.25) saturate(1.1);
+}
+html.a11y-underline-links a {
+  text-decoration: underline !important;
+}
+html.a11y-reduce-motion *,
+html.a11y-reduce-motion *::before,
+html.a11y-reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
