@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   AlertTriangle,
   MessageCircle,
-  FileCheck2,
 } from "lucide-react";
 import { getListing, getEvent, computeOrderTotals } from "@/lib/queries/catalog";
 import { getCategory } from "@/lib/mock/categories";
@@ -21,6 +20,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ShareButton } from "@/components/ShareButton";
 import { ListingOwnerActions } from "@/components/ListingOwnerActions";
+import { TicketPassport } from "@/components/TicketPassport";
 
 type Props = { params: { id: string } };
 
@@ -136,23 +136,14 @@ export default async function ListingDetailsPage({ params }: Props) {
             <span className="font-bold text-ink-700">לתיאום מול המוכר/ת</span>
           )}
         </div>
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-ink-500">קובץ הכרטיס</span>
-          {listing.hasTicketFile ? (
-            <span className="font-bold text-accent-600 flex items-center gap-1">
-              <FileCheck2 size={14} />
-              הועלה למערכת — לא ייחשף עד לרכישה
-            </span>
-          ) : (
-            <span className="font-bold text-ink-400">טרם הועלה</span>
-          )}
-        </div>
         {listing.note && (
           <div className="rounded-xl bg-ink-100 p-3 text-xs text-ink-700 leading-relaxed">
             &ldquo;{listing.note}&rdquo;
           </div>
         )}
       </div>
+
+      <TicketPassport hasTicketFile={listing.hasTicketFile} verificationLevel={listing.seller.verificationLevel} />
 
       {/* Price breakdown */}
       <div className="mx-4 mt-4 bg-white rounded-2xl border border-ink-900/5 shadow-card p-4 space-y-2.5">
