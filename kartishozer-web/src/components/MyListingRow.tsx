@@ -9,6 +9,7 @@ import { LISTING_STATUS_LABELS, LISTING_STATUS_TONE } from "@/lib/status-labels"
 import { updateListingAction, delistListingAction } from "@/lib/actions/listings.actions";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { TicketFileUpload } from "@/components/TicketFileUpload";
 
 export type MyListing = {
   id: string;
@@ -20,6 +21,7 @@ export type MyListing = {
   note: string | null;
   eventNameHe: string;
   eventStartsAt: string;
+  hasTicketFile: boolean;
 };
 
 export function MyListingRow({ listing }: { listing: MyListing }) {
@@ -106,7 +108,11 @@ export function MyListingRow({ listing }: { listing: MyListing }) {
             </div>
           )}
         </div>
-      ) : (
+      ) : null}
+      {canManage && !editing && (
+        <TicketFileUpload listingId={listing.id} hasFile={listing.hasTicketFile} />
+      )}
+      {editing && (
         <div className="mt-3 pt-3 border-t border-ink-900/5 space-y-2.5">
           <div className="grid grid-cols-2 gap-2.5">
             <div>

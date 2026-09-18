@@ -17,7 +17,9 @@ export default async function FavoritesPage() {
     user
       ? db.favorite.findMany({
           where: { userId: user.id, listing: { deletedAt: null } },
-          include: { listing: { include: { vendor: { include: { user: true } } } } },
+          include: {
+            listing: { include: { vendor: { include: { user: true } }, ticketFile: { select: { id: true } } } },
+          },
           orderBy: { createdAt: "desc" },
         })
       : Promise.resolve([]),
@@ -72,6 +74,7 @@ export default async function FavoritesPage() {
         isSafePassExchange: l.isSafePassExchange,
         note: l.note ?? undefined,
         createdAt: l.createdAt.toISOString(),
+        hasTicketFile: Boolean(l.ticketFile),
       };
       return { listing, eventItem: await getEvent(l.eventId) };
     })

@@ -71,6 +71,7 @@ export type Listing = {
   isSafePassExchange: boolean; // digital transfer via platform, no physical handoff
   note?: string;
   createdAt: string; // ISO date
+  hasTicketFile: boolean; // seller uploaded the actual ticket to the digital vault
 };
 
 export type PlatformFees = {

@@ -18,6 +18,23 @@ const createListingSchema = z.object({
 
 type ActionResult<T = { listingId: string }> = T | { error: string };
 
+/** The score → outcome mapping assessListingRisk below resolves to. */
+function decideRiskOutcome(
+  totalScore: number,
+  thresholds: { autoApprove: number; manualReview: number; reject: number }
+): { riskLevel: RiskLevel; status: ListingStatus; decision: string } {
+  if (totalScore >= thresholds.reject) {
+    return { riskLevel: "BLOCKED", status: "REJECTED", decision: "REJECT" };
+  }
+  if (totalScore >= thresholds.manualReview) {
+    return { riskLevel: "HIGH", status: "PENDING_REVIEW", decision: "REQUEST_INFO" };
+  }
+  if (totalScore >= thresholds.autoApprove) {
+    return { riskLevel: "MEDIUM", status: "ACTIVE", decision: "APPROVE" };
+  }
+  return { riskLevel: "LOW", status: "ACTIVE", decision: "APPROVE" };
+}
+
 /**
  * Israeli consumer-protection law bars reselling a ticket for more than
  * its face value (platform/service fees are charged separately at
@@ -46,13 +63,19 @@ async function checkMarkupAllowed(priceAgorot: number, faceValueAgorot: number):
 /**
  * Real (not fake) risk engine — mirrors the thresholds the admin panel
  * already exposes in PlatformConfig (risk_auto_approve / risk_manual_review
- * / risk_reject). No stolen-ticket detection is possible without uploaded
- * ticket files, so duplicateBarcode / duplicatePdfHash stay false —
- * everything else is computed from real data: this vendor's history and
- * dispute record, how many other listings they already have for this same
- * event, this listing's quantity and price. Markup itself is no longer
- * scored here — see checkMarkupAllowed, which runs before this and blocks
- * outright instead of contributing points toward a "maybe fine" score.
+ * / risk_reject). duplicateBarcode / duplicatePdfHash always start false
+ * here — there's no ticket file yet at listing-creation time to check.
+ * duplicatePdfHash only ever flips to true afterwards, from
+ * ticketFiles.actions.ts, which forces PENDING_REVIEW/HIGH outright rather
+ * than routing through this scoring ladder — an exact-duplicate ticket
+ * file is decisive on its own, not a signal to weigh against others
+ * (barcode-based detection isn't implemented at all yet). Everything else
+ * here is computed from real data: this vendor's history
+ * and dispute record, how many other listings they already have for this
+ * same event, this listing's quantity and price. Markup itself is no
+ * longer scored here — see checkMarkupAllowed, which runs before this and
+ * blocks outright instead of contributing points toward a "maybe fine"
+ * score.
  */
 async function assessListingRisk(input: {
   vendorId: string;
@@ -136,21 +159,11 @@ async function assessListingRisk(input: {
   if (trustedSellerCredit) totalScore -= 25;
   totalScore = Math.max(0, totalScore);
 
-  let riskLevel: RiskLevel = "LOW";
-  let status: ListingStatus = "ACTIVE";
-  let decision = "APPROVE";
-  if (totalScore >= reject) {
-    riskLevel = "BLOCKED";
-    status = "REJECTED";
-    decision = "REJECT";
-  } else if (totalScore >= manualReview) {
-    riskLevel = "HIGH";
-    status = "PENDING_REVIEW";
-    decision = "REQUEST_INFO";
-  } else if (totalScore >= autoApprove) {
-    riskLevel = "MEDIUM";
-    status = "ACTIVE";
-  }
+  const { riskLevel, status, decision } = decideRiskOutcome(totalScore, {
+    autoApprove,
+    manualReview,
+    reject,
+  });
 
   return {
     totalScore,

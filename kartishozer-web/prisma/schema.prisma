@@ -170,11 +170,33 @@ model Listing {
   riskAssessment ListingRisk?
   orders         Order[]
   favorites      Favorite[]
+  ticketFile     TicketFile?
 
   @@index([status])
   @@index([eventId])
   @@index([vendorId])
   @@index([riskLevel])
+}
+
+// The seller's actual ticket file, held in a digital vault: never linked
+// to from anywhere a buyer can reach before they've paid (see
+// /api/tickets/[listingId], the only thing that ever reads storageUrl).
+// sha256 is the exact-file duplicate check — the same bytes uploaded again
+// under a different listing (even a different vendor) is strong fraud
+// evidence on its own. Barcode/QR-based duplicate detection (catching a
+// re-encoded or re-photographed copy of the same underlying ticket, not
+// just the same file) is a deliberate follow-up, not implemented here.
+model TicketFile {
+  id            String   @id @default(cuid())
+  listingId     String   @unique
+  listing       Listing  @relation(fields: [listingId], references: [id])
+  storageUrl    String
+  mimeType      String
+  fileSizeBytes Int
+  sha256        String
+  uploadedAt    DateTime @default(now())
+
+  @@index([sha256])
 }
 
 model ListingRisk {

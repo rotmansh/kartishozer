@@ -10,6 +10,7 @@ import {
   MessageCircle,
   LayoutDashboard,
   Heart,
+  FileDown,
 } from "lucide-react";
 import { getAppUser, isAdmin } from "@/lib/auth/server";
 import { db } from "@/lib/db";
@@ -47,7 +48,7 @@ export default async function ProfilePage() {
     user.vendor
       ? db.listing.findMany({
           where: { vendorId: user.vendor.id, deletedAt: null },
-          include: { event: true },
+          include: { event: true, ticketFile: { select: { id: true } } },
           orderBy: { createdAt: "desc" },
         })
       : Promise.resolve([]),
@@ -56,6 +57,7 @@ export default async function ProfilePage() {
       include: {
         event: true,
         vendor: true,
+        listing: { select: { ticketFile: { select: { id: true } } } },
         conversation: { include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } } },
         disputes: { where: { status: { in: ["OPEN", "UNDER_REVIEW"] } }, select: { id: true } },
       },
@@ -169,6 +171,7 @@ export default async function ProfilePage() {
                   note: l.note,
                   eventNameHe: l.event.nameHe,
                   eventStartsAt: l.event.startsAt.toISOString(),
+                  hasTicketFile: Boolean(l.ticketFile),
                 }}
               />
             ))}
@@ -211,6 +214,16 @@ export default async function ProfilePage() {
                     )}
                   </Link>
                 )}
+                {o.listing.ticketFile &&
+                  ["PAID", "CONFIRMED", "TICKET_DELIVERED", "DISPUTED"].includes(o.status) && (
+                    <a
+                      href={`/api/tickets/${o.listingId}`}
+                      className="tap mt-3 pt-3 border-t border-ink-900/5 flex items-center gap-1.5 text-xs font-bold text-accent-600"
+                    >
+                      <FileDown size={14} />
+                      הורדת קובץ הכרטיס
+                    </a>
+                  )}
                 {["PAID", "CONFIRMED", "TICKET_DELIVERED"].includes(o.status) &&
                   (o.disputes.length > 0 ? (
                     <p className="mt-3 pt-3 border-t border-ink-900/5 text-xs font-bold text-accent-600">

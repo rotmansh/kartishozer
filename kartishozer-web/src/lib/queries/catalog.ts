@@ -43,7 +43,9 @@ async function toSeller(vendor: Vendor & { user: User }): Promise<Seller> {
   };
 }
 
-async function toListing(listing: DbListing & { vendor: Vendor & { user: User } }): Promise<Listing> {
+async function toListing(
+  listing: DbListing & { vendor: Vendor & { user: User }; ticketFile: { id: string } | null }
+): Promise<Listing> {
   return {
     id: listing.id,
     eventId: listing.eventId,
@@ -56,10 +58,14 @@ async function toListing(listing: DbListing & { vendor: Vendor & { user: User } 
     isSafePassExchange: listing.isSafePassExchange,
     note: listing.note ?? undefined,
     createdAt: listing.createdAt.toISOString(),
+    hasTicketFile: Boolean(listing.ticketFile),
   };
 }
 
-const listingInclude = { vendor: { include: { user: true } } } as const;
+const listingInclude = {
+  vendor: { include: { user: true } },
+  ticketFile: { select: { id: true } },
+} as const;
 
 export async function getEvent(id: string): Promise<EventItem | null> {
   const event = await db.event.findUnique({ where: { id }, include: { venue: true } });
