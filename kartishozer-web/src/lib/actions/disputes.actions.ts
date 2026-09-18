@@ -8,6 +8,7 @@ import { sendDisputeUpdateEmail } from "@/lib/notifications/email";
 import { sendPushForDisputeUpdate } from "@/lib/notifications/push";
 import { getFileStorageProvider } from "@/lib/storage/provider.factory";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { fileContentMatchesClaimedType } from "@/lib/fileSignature";
 import type { OrderStatus, DisputeEvidenceUploader } from "@prisma/client";
 
 type ActionResult<T = { success: true }> = T | { error: string };
@@ -272,6 +273,14 @@ export async function addDisputeEvidenceAction(formData: FormData): Promise<Acti
   if (!storage) return { error: "העלאת קבצים אינה זמינה כרגע" };
 
   const buffer = Buffer.from(await file.arrayBuffer());
+
+  // Same defense as ticketFiles.actions.ts's upload — file.type is only
+  // what the browser's upload request claimed, so check the actual bytes
+  // before trusting it for storage or how this file gets served back.
+  if (!fileContentMatchesClaimedType(buffer, file.type)) {
+    return { error: "תוכן הקובץ אינו תואם לסוג הקובץ המוצהר" };
+  }
+
   const key = `dispute-evidence/${disputeId}-${Date.now()}`;
   const { url } = await storage.upload({ key, buffer, contentType: file.type });
 

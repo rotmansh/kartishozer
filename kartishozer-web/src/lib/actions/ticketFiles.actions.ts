@@ -7,6 +7,7 @@ import { getAppUser } from "@/lib/auth/server";
 import { getFileStorageProvider } from "@/lib/storage/provider.factory";
 import { RISK_ENGINE_VERSION } from "@/lib/riskEngineVersion";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { fileContentMatchesClaimedType } from "@/lib/fileSignature";
 
 type ActionResult<T = { success: true }> = T | { error: string };
 
@@ -56,6 +57,14 @@ export async function uploadTicketFileAction(formData: FormData): Promise<Action
   if (!provider) return { error: "העלאת קבצים אינה זמינה כרגע — נסו שוב מאוחר יותר" };
 
   const buffer = Buffer.from(await file.arrayBuffer());
+
+  // file.type is only what the browser's upload request claimed — check
+  // the actual bytes match before trusting it for anything (storage,
+  // hashing, or the Content-Type this file is later served back with).
+  if (!fileContentMatchesClaimedType(buffer, file.type)) {
+    return { error: "תוכן הקובץ אינו תואם לסוג הקובץ המוצהר" };
+  }
+
   const sha256 = createHash("sha256").update(buffer).digest("hex");
 
   const duplicate = await db.ticketFile.findFirst({
