@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { FileCheck2, Upload } from "lucide-react";
+import { Eye, FileCheck2, Upload } from "lucide-react";
 import { uploadTicketFileAction } from "@/lib/actions/ticketFiles.actions";
 
 export function TicketFileUpload({ listingId, hasFile }: { listingId: string; hasFile: boolean }) {
@@ -37,16 +37,30 @@ export function TicketFileUpload({ listingId, hasFile }: { listingId: string; ha
         onChange={handleFileChange}
         className="hidden"
       />
-      <button
-        onClick={() => inputRef.current?.click()}
-        disabled={isPending}
-        className={`tap w-full flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold disabled:opacity-40 ${
-          hasFile ? "bg-accent-50 text-accent-600" : "bg-brand-50 text-brand-600"
-        }`}
-      >
-        {hasFile ? <FileCheck2 size={14} /> : <Upload size={14} />}
-        {isPending ? "מעלה..." : hasFile ? "כרטיס הועלה — להחלפה" : "העלאת קובץ הכרטיס"}
-      </button>
+      <div className="flex gap-1.5">
+        <button
+          onClick={() => inputRef.current?.click()}
+          disabled={isPending}
+          className={`tap flex-1 flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold disabled:opacity-40 ${
+            hasFile ? "bg-accent-50 text-accent-600" : "bg-brand-50 text-brand-600"
+          }`}
+        >
+          {hasFile ? <FileCheck2 size={14} /> : <Upload size={14} />}
+          {isPending ? "מעלה..." : hasFile ? "כרטיס הועלה — להחלפה" : "העלאת קובץ הכרטיס"}
+        </button>
+        {hasFile && (
+          <a
+            href={`/api/tickets/${listingId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="tap flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold bg-ink-100 text-ink-700"
+            aria-label="צפייה בקובץ שהועלה"
+          >
+            <Eye size={14} />
+            צפייה
+          </a>
+        )}
+      </div>
       {error && <p className="text-[11px] text-accent-600 mt-1">{error}</p>}
     </div>
   );

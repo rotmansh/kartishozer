@@ -51,7 +51,11 @@ export async function GET(_req: Request, { params }: { params: { listingId: stri
   return new NextResponse(buffer, {
     headers: {
       "Content-Type": listing.ticketFile.mimeType,
-      "Content-Disposition": `attachment; filename="ticket-${listing.id}.${ext}"`,
+      // "inline" (not "attachment") so it opens/previews right in the
+      // browser — both the seller confirming what they uploaded and the
+      // buyer looking at their ticket can still save it from there
+      // (a PDF viewer's own download button, or long-press on an image).
+      "Content-Disposition": `inline; filename="ticket-${listing.id}.${ext}"`,
       "Cache-Control": "private, no-store",
     },
   });

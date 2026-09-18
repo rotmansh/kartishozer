@@ -221,7 +221,7 @@ export default async function ProfilePage() {
                       className="tap mt-3 pt-3 border-t border-ink-900/5 flex items-center gap-1.5 text-xs font-bold text-accent-600"
                     >
                       <FileDown size={14} />
-                      הורדת קובץ הכרטיס
+                      צפייה בקובץ הכרטיס
                     </a>
                   )}
                 {["PAID", "CONFIRMED", "TICKET_DELIVERED"].includes(o.status) &&
