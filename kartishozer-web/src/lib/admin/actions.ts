@@ -283,6 +283,7 @@ export async function resolveDisputeAction(
 
   await Promise.all([
     sendDisputeUpdateEmail({
+      recipientUserId: order.buyer.id,
       toEmail: order.buyer.email,
       toName: order.buyer.fullName,
       subject: `עדכון על הפנייה שפתחת — ${eventName}`,
@@ -290,6 +291,7 @@ export async function resolveDisputeAction(
     }),
     sendPushForDisputeUpdate({ recipientUserId: order.buyer.id, title: "עדכון על פנייה", body: buyerMessage }),
     sendDisputeUpdateEmail({
+      recipientUserId: order.vendor.user.id,
       toEmail: order.vendor.user.email,
       toName: order.vendor.user.fullName,
       subject: `עדכון על מחלוקת — ${eventName}`,

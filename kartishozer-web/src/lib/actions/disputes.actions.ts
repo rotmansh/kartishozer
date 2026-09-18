@@ -160,6 +160,7 @@ export async function openDisputeAction(
   const sellerUser = order.vendor.user;
   await Promise.all([
     sendDisputeUpdateEmail({
+      recipientUserId: sellerUser.id,
       toEmail: sellerUser.email,
       toName: sellerUser.fullName,
       subject: `נפתחה פנייה על ${order.event.nameHe}`,
@@ -222,6 +223,7 @@ export async function sellerRespondToDisputeAction(
   const headline = `המוכר/ת הגיב/ה לפנייה שפתחת על <strong>${event.nameHe}</strong>. אפשר לראות את התגובה בעמוד ההזמנה.`;
   await Promise.all([
     sendDisputeUpdateEmail({
+      recipientUserId: buyer.id,
       toEmail: buyer.email,
       toName: buyer.fullName,
       subject: `התקבלה תגובה לפנייה שלך — ${event.nameHe}`,
@@ -322,6 +324,7 @@ export async function addDisputeEvidenceAction(formData: FormData): Promise<Acti
     const headline = `נוספה אסמכתא חדשה לפנייה על <strong>${event.nameHe}</strong>. אפשר לראות אותה בעמוד ההזמנה.`;
     await Promise.all([
       sendDisputeUpdateEmail({
+        recipientUserId: recipient.id,
         toEmail: recipient.email,
         toName: recipient.fullName,
         subject: `נוספה אסמכתא לפנייה — ${event.nameHe}`,

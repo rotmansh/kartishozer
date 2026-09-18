@@ -57,6 +57,7 @@ export async function sendMessageAction(input: z.infer<typeof sendMessageSchema>
   // failure affect the message that already sent successfully.
   await Promise.all([
     sendNewMessageEmail({
+      recipientUserId: recipient.id,
       toEmail: recipient.email,
       toName: recipient.fullName,
       fromName: user.fullName,

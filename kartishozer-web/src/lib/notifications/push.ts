@@ -3,6 +3,7 @@ import "server-only";
 import webpush from "web-push";
 import { db } from "@/lib/db";
 import { getSiteUrl } from "@/lib/site-url";
+import { getNotificationPreference } from "@/lib/notificationPreferences";
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim();
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY?.trim();
@@ -51,6 +52,7 @@ export async function sendPushForNewMessage(params: {
   conversationId: string;
   messageBody: string;
 }): Promise<void> {
+  if (!(await getNotificationPreference(params.recipientUserId)).notifyNewMessage) return;
   await deliverPush(params.recipientUserId, {
     title: `${params.fromName} • ${params.eventNameHe}`,
     body: params.messageBody,
@@ -63,6 +65,7 @@ export async function sendPushForDisputeUpdate(params: {
   title: string;
   body: string;
 }): Promise<void> {
+  if (!(await getNotificationPreference(params.recipientUserId)).notifyDisputeUpdate) return;
   await deliverPush(params.recipientUserId, { title: params.title, body: params.body, url: "/profile" });
 }
 
@@ -71,6 +74,7 @@ export async function sendPushForListingAvailable(params: {
   eventNameHe: string;
   eventId: string;
 }): Promise<void> {
+  if (!(await getNotificationPreference(params.recipientUserId)).notifyListingAvailable) return;
   await deliverPush(params.recipientUserId, {
     title: "כרטיס חדש זמין",
     body: `התפרסם כרטיס ל${params.eventNameHe} שחיכיתם לו`,

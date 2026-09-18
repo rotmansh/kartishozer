@@ -2,6 +2,7 @@ import "server-only";
 
 import { Resend } from "resend";
 import { getSiteUrl } from "@/lib/site-url";
+import { getNotificationPreference } from "@/lib/notificationPreferences";
 
 // A seller freely types an event's name (see events.actions.ts) — never
 // trust it as safe HTML. Used for eventNameHe below; sendNewMessageEmail's
@@ -25,6 +26,7 @@ const EMAIL_FROM = process.env.EMAIL_FROM?.trim() || "כרטיס חוזר <onboa
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
 export async function sendNewMessageEmail(params: {
+  recipientUserId: string;
   toEmail: string;
   toName: string;
   fromName: string;
@@ -33,6 +35,7 @@ export async function sendNewMessageEmail(params: {
   messageBody: string;
 }): Promise<void> {
   if (!resend) return;
+  if (!(await getNotificationPreference(params.recipientUserId)).notifyNewMessage) return;
 
   const url = `${getSiteUrl()}/messages/${params.conversationId}`;
 
@@ -68,12 +71,14 @@ export async function sendNewMessageEmail(params: {
 // Anyone who wants the details opens the order in the app, where React
 // renders it safely.
 export async function sendDisputeUpdateEmail(params: {
+  recipientUserId: string;
   toEmail: string;
   toName: string;
   subject: string;
   headline: string;
 }): Promise<void> {
   if (!resend) return;
+  if (!(await getNotificationPreference(params.recipientUserId)).notifyDisputeUpdate) return;
 
   const url = `${getSiteUrl()}/profile`;
 
@@ -99,12 +104,14 @@ export async function sendDisputeUpdateEmail(params: {
 }
 
 export async function sendListingAvailableEmail(params: {
+  recipientUserId: string;
   toEmail: string;
   toName: string;
   eventNameHe: string;
   eventId: string;
 }): Promise<void> {
   if (!resend) return;
+  if (!(await getNotificationPreference(params.recipientUserId)).notifyListingAvailable) return;
 
   const url = `${getSiteUrl()}/event/${params.eventId}`;
   const safeEventName = escapeHtml(params.eventNameHe);

@@ -40,6 +40,24 @@ model User {
   disputeEvidenceUploads DisputeEvidence[]
   eventWaitlistEntries  EventWaitlist[]
   sellerReviewsWritten  SellerReview[]
+  notificationPreference NotificationPreference?
+}
+
+// Per-user opt-outs, one row per user — absence means "everything on"
+// (see getNotificationPreference), matching how every notification
+// helper already behaves today without this table. Each column gates
+// both the email and push variant of that category together; splitting
+// channel from category would be more flexible but nothing in the UI
+// asks for that yet, and it's easy to add a column later without
+// touching the ones that already exist.
+model NotificationPreference {
+  id                     String   @id @default(cuid())
+  userId                 String   @unique
+  user                   User     @relation(fields: [userId], references: [id])
+  notifyNewMessage       Boolean  @default(true)
+  notifyDisputeUpdate    Boolean  @default(true)
+  notifyListingAvailable Boolean  @default(true)
+  updatedAt              DateTime @updatedAt
 }
 
 enum VerificationLevel {

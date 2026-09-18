@@ -30,7 +30,13 @@ export async function notifyEventWaitlistIfFirstActiveListing(eventId: string, e
   await Promise.all(
     entries.map((entry) =>
       Promise.all([
-        sendListingAvailableEmail({ toEmail: entry.user.email, toName: entry.user.fullName, eventNameHe, eventId }),
+        sendListingAvailableEmail({
+          recipientUserId: entry.userId,
+          toEmail: entry.user.email,
+          toName: entry.user.fullName,
+          eventNameHe,
+          eventId,
+        }),
         sendPushForListingAvailable({ recipientUserId: entry.userId, eventNameHe, eventId }),
       ])
     )
