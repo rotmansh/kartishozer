@@ -26,6 +26,31 @@ export type PlatformStats = {
   blockedListings: number;
 };
 
+// The rollups behind /admin/analytics — every number here is computed
+// live from the P2/P3 data foundation (AnalyticsEvent, Visitor,
+// OrderPricing) rather than a stored counter, and every "since" window
+// only reflects activity from when that instrumentation shipped forward
+// (see getMarketplaceAnalytics's own comment for exactly which fields
+// that applies to).
+export type MarketplaceAnalytics = {
+  dau: number;
+  wau: number;
+  mau: number;
+  newSignups7d: number;
+  newListings7d: number;
+  uniqueSellersAllTime: number;
+  uniqueBuyersAllTime: number;
+  sellThroughPercent: number | null;
+  aov30dAgorot: number | null;
+  repeatBuyers: number;
+  repeatSellers: number;
+  listingViewsToPurchasePercent: number | null;
+  checkoutToPurchasePercent: number | null;
+  disputeRate30dPercent: number | null;
+  refundRate30dPercent: number | null;
+  topAcquisitionSources: { source: string; signups: number }[];
+};
+
 export type AdminListing = {
   id: string;
   status: string;

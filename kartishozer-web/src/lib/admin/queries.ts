@@ -4,6 +4,7 @@
 // ============================================================
 
 import { db } from "@/lib/db";
+import { getActiveIdentityCount } from "@/lib/analytics";
 import type { Prisma } from "@prisma/client";
 import type {
   PlatformStats,
@@ -12,6 +13,7 @@ import type {
   AdminPayout,
   AdminVendor,
   PlatformConfigEntry,
+  MarketplaceAnalytics,
 } from "./types";
 
 // ── Platform stats ────────────────────────────────────────────
@@ -488,4 +490,123 @@ export async function getAuditLog(options: {
   ]);
 
   return { items: rows, total, page, pageSize };
+}
+
+// ── Marketplace analytics (P3) ──────────────────────────────────
+// Every number below is computed live from the P2/P3 data foundation
+// (AnalyticsEvent, Visitor, OrderPricing) rather than a stored counter.
+// dau/wau/mau and every "…Percent" conversion figure only reflect
+// activity from whenever that instrumentation shipped (mid-September
+// 2026) forward — there is no view/checkout/visit history from before
+// that, by design (see the P2/P3 audit notes). Everything else here
+// (signups, listings, orders) is computed from timestamps that always
+// existed, so those ARE accurate for their full history.
+
+export async function getMarketplaceAnalytics(): Promise<MarketplaceAnalytics> {
+  const now = new Date();
+  const d1 = new Date(now.getTime() - 24 * 3600_000);
+  const d7 = new Date(now.getTime() - 7 * 24 * 3600_000);
+  const d30 = new Date(now.getTime() - 30 * 24 * 3600_000);
+
+  const [
+    dau,
+    wau,
+    mau,
+    newSignups7d,
+    newListings7d,
+    uniqueSellersAllTime,
+    buyerIdRows,
+    listingStatusCounts,
+    orderAgg30d,
+    repeatBuyerGroups,
+    repeatSellerGroups,
+    uniqueListingViewers30d,
+    uniqueCheckoutStarters30d,
+    disputesOpened30d,
+    refundedOrders30d,
+    signedUpVisitors,
+  ] = await Promise.all([
+    getActiveIdentityCount(d1),
+    getActiveIdentityCount(d7),
+    getActiveIdentityCount(d30),
+
+    db.user.count({ where: { createdAt: { gte: d7 } } }),
+    db.listing.count({ where: { createdAt: { gte: d7 }, deletedAt: null } }),
+    db.vendor.count({ where: { listings: { some: { deletedAt: null } } } }),
+    db.order.findMany({ distinct: ["buyerId"], select: { buyerId: true } }),
+
+    db.listing.groupBy({ by: ["status"], where: { deletedAt: null }, _count: { id: true } }),
+
+    db.order.aggregate({
+      where: { status: { in: ["PAID", "TICKET_DELIVERED", "CONFIRMED"] }, paidAt: { gte: d30 } },
+      _sum: { totalAgorot: true },
+      _count: { id: true },
+    }),
+
+    db.order.groupBy({ by: ["buyerId"], _count: { buyerId: true }, having: { buyerId: { _count: { gt: 1 } } } }),
+    db.order.groupBy({ by: ["vendorId"], _count: { vendorId: true }, having: { vendorId: { _count: { gt: 1 } } } }),
+
+    db.analyticsEvent.findMany({
+      where: { type: "LISTING_VIEWED", createdAt: { gte: d30 } },
+      select: { userId: true, visitorId: true },
+    }),
+    db.analyticsEvent.findMany({
+      where: { type: "CHECKOUT_STARTED", createdAt: { gte: d30 } },
+      select: { userId: true, visitorId: true },
+    }),
+
+    db.dispute.count({ where: { createdAt: { gte: d30 } } }),
+    db.order.count({ where: { status: { in: ["REFUNDED", "PARTIALLY_REFUNDED"] }, createdAt: { gte: d30 } } }),
+
+    db.visitor.findMany({ where: { userId: { not: null } }, select: { firstUtmSource: true } }),
+  ]);
+
+  const lMap = Object.fromEntries(listingStatusCounts.map((r) => [r.status, r._count.id]));
+  const soldCount = lMap["SOLD"] ?? 0;
+  const activeCount = lMap["ACTIVE"] ?? 0;
+  const sellThroughPercent = soldCount + activeCount > 0 ? (soldCount / (soldCount + activeCount)) * 100 : null;
+
+  const ordersInWindow = orderAgg30d._count.id;
+  const aov30dAgorot = ordersInWindow > 0 ? Math.round((orderAgg30d._sum.totalAgorot ?? 0) / ordersInWindow) : null;
+
+  const uniqueViewerCount = new Set(uniqueListingViewers30d.map((r) => r.userId ?? r.visitorId)).size;
+  const uniqueCheckoutCount = new Set(uniqueCheckoutStarters30d.map((r) => r.userId ?? r.visitorId)).size;
+  const purchases30d = ordersInWindow;
+
+  const listingViewsToPurchasePercent =
+    uniqueViewerCount > 0 ? (purchases30d / uniqueViewerCount) * 100 : null;
+  const checkoutToPurchasePercent =
+    uniqueCheckoutCount > 0 ? (purchases30d / uniqueCheckoutCount) * 100 : null;
+
+  const disputeRate30dPercent = ordersInWindow > 0 ? (disputesOpened30d / ordersInWindow) * 100 : null;
+  const refundRate30dPercent = ordersInWindow > 0 ? (refundedOrders30d / ordersInWindow) * 100 : null;
+
+  const sourceCounts = new Map<string, number>();
+  for (const v of signedUpVisitors) {
+    const key = v.firstUtmSource || "ישיר / לא ידוע";
+    sourceCounts.set(key, (sourceCounts.get(key) ?? 0) + 1);
+  }
+  const topAcquisitionSources = [...sourceCounts.entries()]
+    .map(([source, signups]) => ({ source, signups }))
+    .sort((a, b) => b.signups - a.signups)
+    .slice(0, 5);
+
+  return {
+    dau,
+    wau,
+    mau,
+    newSignups7d,
+    newListings7d,
+    uniqueSellersAllTime,
+    uniqueBuyersAllTime: buyerIdRows.length,
+    sellThroughPercent,
+    aov30dAgorot,
+    repeatBuyers: repeatBuyerGroups.length,
+    repeatSellers: repeatSellerGroups.length,
+    listingViewsToPurchasePercent,
+    checkoutToPurchasePercent,
+    disputeRate30dPercent,
+    refundRate30dPercent,
+    topAcquisitionSources,
+  };
 }

@@ -22,11 +22,13 @@ import {
   Users,
   Settings,
   ScrollText,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 
 const NAV: { href: string; icon: LucideIcon; label: string; exact?: boolean }[] = [
   { href: "/admin", icon: LayoutDashboard, label: "סקירה", exact: true },
+  { href: "/admin/analytics", icon: BarChart3, label: "אנליטיקס" },
   { href: "/admin/listings", icon: Ticket, label: "מודעות" },
   { href: "/admin/disputes", icon: AlertTriangle, label: "סכסוכים" },
   { href: "/admin/payouts", icon: Wallet, label: "תשלומים" },
