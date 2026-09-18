@@ -321,11 +321,46 @@ model Order {
   payouts       Payout[]
   ledgerEntries LedgerEntry[]
   paymentEvents PaymentEvent[]
+  pricing       OrderPricing?
   conversation  Conversation?
 
   @@index([status])
   @@index([buyerId])
   @@index([vendorId])
+}
+
+// A permanent, self-contained snapshot of exactly which fee rule was
+// live when this order was created — Order's own priceAgorot/
+// buyerFeeAgorot/totalAgorot keep meaning "what happened", but say
+// nothing about *why* (which config values, which pricing engine
+// structure). Written once, in the same transaction as the order, and
+// never updated afterward: a later refund/dispute changes what actually
+// moved (LedgerEntry/PaymentEvent already record that), never what this
+// order was originally priced under. A future change to buyer_fee_percent/
+// seller_fee_percent, or a new pricing engine version entirely, can
+// therefore never alter the recorded meaning of a past transaction.
+model OrderPricing {
+  id                      String   @id @default(cuid())
+  orderId                 String   @unique
+  order                   Order    @relation(fields: [orderId], references: [id])
+  // The fee-engine RULE STRUCTURE (see src/lib/pricingVersion.ts) — bumped
+  // only when the shape of the calculation itself changes (e.g. tiered
+  // fees, a promo mechanism), never when an admin just edits a percentage.
+  // That per-value history lives in PlatformConfigVersion instead.
+  pricingVersion          String
+  buyerFeePercent         Float
+  sellerFeePercent        Float
+  buyerFeeAgorot          Int
+  sellerFeeAgorot         Int
+  // Always 0 today — no promotional discount/subsidy mechanism exists yet.
+  // The column exists so that whenever one is built, every order from
+  // that point on carries its own true discount amount rather than this
+  // being backfilled or inferred later.
+  discountAgorot          Int      @default(0)
+  totalPaidByBuyerAgorot  Int
+  amountDueToSellerAgorot Int
+  platformRevenueAgorot   Int
+  createdAt               DateTime @default(now())
 }
 
 // Append-only log of every payment/payout lifecycle moment — Order.status
@@ -567,6 +602,33 @@ model PlatformConfig {
   updatedById String?
 }
 
+// Append-only history of every PlatformConfig change — PlatformConfig
+// itself keeps holding only the CURRENT value per key, exactly as
+// before; this is the equivalent of RiskAssessmentEvent/PaymentEvent for
+// business configuration, so "what was buyer_fee_percent on date X" (or
+// payout_delay_days, a risk threshold, etc.) can always be answered
+// precisely. `version` is a per-key sequence (buyer_fee_percent's own
+// v1, v2, v3…), not a global one. Only ever inserted from
+// updatePlatformConfigAction going forward — never backfilled for
+// changes made before this table existed, since that history was never
+// captured and never will be invented.
+model PlatformConfigVersion {
+  id            String   @id @default(cuid())
+  key           String
+  version       Int
+  previousValue String?
+  newValue      String
+  // Real User.id, or "system" — not a FK, same convention as
+  // AuditLog.userId, so this table never breaks if that admin's account
+  // is ever removed.
+  changedById   String
+  effectiveFrom DateTime @default(now())
+  changedAt     DateTime @default(now())
+
+  @@unique([key, version])
+  @@index([key, effectiveFrom])
+}
+
 model AuditLog {
   id           String   @id @default(cuid())
   action       String
@@ -599,8 +661,14 @@ model Visitor {
   id     String  @id
   // Not a `@relation` on purpose, same convention as AuditLog.userId —
   // this table must never be blocked by, or accidentally cascade from,
-  // changes to User.
-  userId String? @unique
+  // changes to User. Deliberately NOT unique: one User can (and normally
+  // does) have several Visitor rows — one per browser/device — once
+  // signed in on each. User-level metrics must dedupe by userId, not by
+  // visitorId, precisely because of this (see getActiveIdentityCount in
+  // src/lib/analytics.ts). Never used to infer identity before sign-in —
+  // linking only ever happens via an authenticated session
+  // (linkVisitorToUser), never fingerprinting.
+  userId String?
 
   firstTouchAt     DateTime @default(now())
   firstUtmSource   String?
@@ -624,6 +692,8 @@ model Visitor {
   lastUtmTerm      String?
   lastReferrer     String?
   lastLandingPath  String?
+
+  @@index([userId])
 }
 
 enum AnalyticsEventType {

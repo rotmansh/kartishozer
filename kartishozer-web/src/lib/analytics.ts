@@ -82,8 +82,29 @@ async function logEvent(input: {
   }
 }
 
-export async function recordSiteVisit(visitorId: string, path: string): Promise<void> {
-  await logEvent({ type: "SITE_VISIT", visitorId, metadata: { path } });
+export async function recordSiteVisit(visitorId: string, path: string, userId: string | null): Promise<void> {
+  await logEvent({ type: "SITE_VISIT", visitorId, userId, metadata: { path } });
+}
+
+/**
+ * The correct way to count distinct *people*, not distinct browsers —
+ * one signed-in user can have several Visitor rows (phone, laptop, a
+ * second browser), and each fires its own SITE_VISIT. A signed-in visit
+ * always carries `userId` directly (see recordSiteVisit), so deduping by
+ * `userId ?? visitorId` collapses every device of the same signed-in
+ * user into one, while each still-anonymous visitor keeps counting
+ * separately by their own visitorId. This is the one place DAU/WAU/MAU
+ * (or any other "how many distinct users" question) should be computed
+ * from — never a bare `COUNT(DISTINCT visitorId)`, which would double-
+ * count a multi-device user.
+ */
+export async function getActiveIdentityCount(since: Date): Promise<number> {
+  const rows = await db.analyticsEvent.findMany({
+    where: { type: "SITE_VISIT", createdAt: { gte: since } },
+    select: { userId: true, visitorId: true },
+  });
+  const keys = new Set(rows.map((r) => r.userId ?? r.visitorId));
+  return keys.size;
 }
 
 /**

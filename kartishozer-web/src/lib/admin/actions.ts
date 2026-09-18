@@ -462,11 +462,34 @@ export async function updatePlatformConfigAction(
 
   const existing = await db.platformConfig.findUnique({ where: { key }, select: { value: true } });
 
-  await db.platformConfig.upsert({
-    where: { key },
-    create: { key, value, updatedById: admin.id },
-    update: { value, updatedById: admin.id },
-  });
+  // Only version an actual change — an admin re-saving the same value
+  // shouldn't inflate this key's version sequence with a meaningless
+  // no-op entry.
+  if (existing?.value !== value) {
+    await db.$transaction(async (tx) => {
+      await tx.platformConfig.upsert({
+        where: { key },
+        create: { key, value, updatedById: admin.id },
+        update: { value, updatedById: admin.id },
+      });
+
+      const lastVersion = await tx.platformConfigVersion.findFirst({
+        where: { key },
+        orderBy: { version: "desc" },
+        select: { version: true },
+      });
+
+      await tx.platformConfigVersion.create({
+        data: {
+          key,
+          version: (lastVersion?.version ?? 0) + 1,
+          previousValue: existing?.value ?? null,
+          newValue: value,
+          changedById: admin.id,
+        },
+      });
+    });
+  }
 
   await auditAdmin(admin.id, "CONFIG_UPDATED", "PlatformConfig", key, {
     value,

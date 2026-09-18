@@ -3,6 +3,7 @@
 import { randomUUID } from "crypto";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
+import { getAppUser } from "@/lib/auth/server";
 import { getSiteUrl } from "@/lib/site-url";
 import { VISITOR_COOKIE, recordSiteVisit } from "@/lib/analytics";
 
@@ -100,5 +101,10 @@ export async function recordVisitAction(input: {
     console.error("Failed to record visit attribution:", err);
   }
 
-  await recordSiteVisit(vid, input.path);
+  // A signed-in visit carries userId directly on its SITE_VISIT row —
+  // this (not the visitorId) is what user-level metrics must dedupe by,
+  // since the same signed-in user can have several Visitor rows, one per
+  // browser/device (see getActiveIdentityCount).
+  const user = await getAppUser();
+  await recordSiteVisit(vid, input.path, user?.id ?? null);
 }

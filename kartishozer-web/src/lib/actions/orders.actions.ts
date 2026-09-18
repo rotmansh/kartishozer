@@ -6,6 +6,7 @@ import { getAppUser } from "@/lib/auth/server";
 import { getPaymentProvider } from "@/lib/payments/provider.factory";
 import { computeOrderTotals, getPlatformFees } from "@/lib/queries/catalog";
 import { recordPaymentFunnelEvent } from "@/lib/analytics";
+import { PRICING_VERSION } from "@/lib/pricingVersion";
 
 type CreateOrderResult = { orderId: string } | { error: string };
 
@@ -103,6 +104,26 @@ export async function createOrderAction(listingId: string): Promise<CreateOrderR
           creditAccount: "SELLER_PENDING",
         },
       ],
+    });
+
+    // The permanent, independent pricing record — see OrderPricing's own
+    // doc comment. Written from the exact same fee/total numbers already
+    // computed above, never recomputed from *current* config later, so a
+    // future change to buyer_fee_percent/seller_fee_percent (or an
+    // entirely new PRICING_VERSION) can never alter what this order is
+    // understood to have been priced under.
+    await tx.orderPricing.create({
+      data: {
+        orderId: created.id,
+        pricingVersion: PRICING_VERSION,
+        buyerFeePercent: fees.buyerFeePercent,
+        sellerFeePercent: fees.sellerFeePercent,
+        buyerFeeAgorot: totals.buyerFeeAgorot,
+        sellerFeeAgorot,
+        totalPaidByBuyerAgorot: totals.totalAgorot,
+        amountDueToSellerAgorot: sellerProceedsAgorot,
+        platformRevenueAgorot: totals.buyerFeeAgorot + sellerFeeAgorot,
+      },
     });
 
     // A conversation exists for every order from the moment it's paid —
