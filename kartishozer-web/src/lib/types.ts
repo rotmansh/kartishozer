@@ -72,6 +72,7 @@ export type Listing = {
   note?: string;
   createdAt: string; // ISO date
   hasTicketFile: boolean; // seller uploaded the actual ticket to the digital vault
+  offersOfficialTransfer: boolean; // seller-reported: will use the ticketing provider's own transfer feature
 };
 
 export type PlatformFees = {

@@ -75,6 +75,7 @@ export default async function FavoritesPage() {
         note: l.note ?? undefined,
         createdAt: l.createdAt.toISOString(),
         hasTicketFile: Boolean(l.ticketFile),
+        offersOfficialTransfer: l.offersOfficialTransfer,
       };
       return { listing, eventItem: await getEvent(l.eventId) };
     })

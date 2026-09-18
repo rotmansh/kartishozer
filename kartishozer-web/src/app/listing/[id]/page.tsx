@@ -136,6 +136,15 @@ export default async function ListingDetailsPage({ params }: Props) {
             <span className="font-bold text-ink-700">לתיאום מול המוכר/ת</span>
           )}
         </div>
+        {listing.offersOfficialTransfer && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-ink-500">העברה רשמית</span>
+            <span className="font-bold text-accent-600 flex items-center gap-1">
+              <ShieldCheck size={14} />
+              המוכר/ת מציע/ה העברה רשמית דרך המערכת המנפיקה
+            </span>
+          </div>
+        )}
         {listing.note && (
           <div className="rounded-xl bg-ink-100 p-3 text-xs text-ink-700 leading-relaxed">
             &ldquo;{listing.note}&rdquo;

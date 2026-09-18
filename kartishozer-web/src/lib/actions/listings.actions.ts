@@ -13,10 +13,29 @@ const createListingSchema = z.object({
   faceValueAgorot: z.number().int().min(1),
   priceAgorot: z.number().int().min(1),
   isSafePassExchange: z.boolean(),
+  offersOfficialTransfer: z.boolean(),
   note: z.string().max(300).optional(),
 });
 
 type ActionResult<T = { listingId: string }> = T | { error: string };
+
+/**
+ * The free (no external KYC provider) half of graduated seller
+ * verification: a vendor already earning the risk engine's
+ * trustedSellerCredit (see assessListingRisk) — a real track record of
+ * completed sales with zero disputes — is promoted from BASIC to FULL
+ * automatically, the same badge an admin's manual VERIFY action grants.
+ * One-directional on purpose: nothing here ever demotes a vendor back
+ * down; a dispute against a FULL seller is a matter for admin review
+ * (/admin/users), not an automatic downgrade.
+ */
+async function promoteVendorIfTrusted(vendorId: string, currentLevel: string, trustedSellerCredit: boolean) {
+  if (!trustedSellerCredit || currentLevel === "FULL") return;
+  await db.vendor.update({
+    where: { id: vendorId },
+    data: { verificationLevel: "FULL", isVerified: true },
+  });
+}
 
 /** The score → outcome mapping assessListingRisk below resolves to. */
 function decideRiskOutcome(
@@ -222,6 +241,7 @@ export async function createListingAction(
     priceAgorot: data.priceAgorot,
     faceValueAgorot: data.faceValueAgorot,
   });
+  await promoteVendorIfTrusted(vendor.id, vendor.verificationLevel, risk.trustedSellerCredit);
 
   const listing = await db.listing.create({
     data: {
@@ -233,6 +253,7 @@ export async function createListingAction(
       priceAgorot: data.priceAgorot,
       faceValueAgorot: data.faceValueAgorot,
       isSafePassExchange: data.isSafePassExchange,
+      offersOfficialTransfer: data.offersOfficialTransfer,
       note: data.note || null,
       riskScore: risk.totalScore,
       riskLevel: risk.riskLevel,
@@ -303,6 +324,10 @@ export async function updateListingAction(
         excludeListingId: listing.id,
       })
     : null;
+
+  if (risk) {
+    await promoteVendorIfTrusted(user.vendor.id, user.vendor.verificationLevel, risk.trustedSellerCredit);
+  }
 
   await db.listing.update({
     where: { id: listing.id },

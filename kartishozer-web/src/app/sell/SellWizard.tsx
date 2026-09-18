@@ -65,6 +65,7 @@ export function SellWizard() {
   const [faceValue, setFaceValue] = useState("");
   const [price, setPrice] = useState("");
   const [safePass, setSafePass] = useState(true);
+  const [officialTransfer, setOfficialTransfer] = useState(false);
   const [note, setNote] = useState("");
 
   useEffect(() => {
@@ -131,6 +132,7 @@ export function SellWizard() {
       faceValueAgorot,
       priceAgorot,
       isSafePassExchange: safePass,
+      offersOfficialTransfer: officialTransfer,
       note: note || undefined,
     });
     setSubmitting(false);
@@ -503,6 +505,32 @@ export function SellWizard() {
             </span>
           </button>
 
+          <button
+            onClick={() => setOfficialTransfer((v) => !v)}
+            className="w-full flex items-center justify-between rounded-2xl bg-white border border-ink-900/10 p-4"
+          >
+            <div className="text-right">
+              <p className="text-sm font-bold text-ink-900 flex items-center gap-1.5">
+                העברה רשמית דרך המערכת המנפיקה
+                <span className="rounded-full bg-accent-50 text-accent-600 text-[10px] font-bold px-2 py-0.5">מומלץ</span>
+              </p>
+              <p className="text-[11px] text-ink-500 mt-0.5">
+                אם לאירוע יש אפשרות העברת כרטיס רשמית (למשל בין חשבונות), עדיפה על שליחת צילום מסך
+              </p>
+            </div>
+            <span
+              className={cn(
+                "w-11 h-6 rounded-full transition-colors relative flex-shrink-0",
+                officialTransfer ? "bg-accent-500" : "bg-ink-200"
+              )}
+            >
+              <span
+                className="absolute top-1 h-4 w-4 rounded-full bg-white transition-all"
+                style={{ right: officialTransfer ? "22px" : "4px" }}
+              />
+            </span>
+          </button>
+
           <div>
             <label className="text-xs font-bold text-ink-500 block mb-2">הערה לקונה/ה (אופציונלי)</label>
             <textarea
@@ -533,6 +561,7 @@ export function SellWizard() {
             <Row label="מחיר פנים" value={fmtAgorot(faceValueAgorot)} />
             <Row label="המחיר שלכם" value={fmtAgorot(priceAgorot)} bold />
             <Row label="העברה" value={safePass ? "דיגיטלית מאובטחת" : "תיאום ישיר מול הקונה"} />
+            {officialTransfer && <Row label="העברה רשמית" value="כן" />}
           </div>
 
           {submitError && (

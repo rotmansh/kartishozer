@@ -59,6 +59,7 @@ async function toListing(
     note: listing.note ?? undefined,
     createdAt: listing.createdAt.toISOString(),
     hasTicketFile: Boolean(listing.ticketFile),
+    offersOfficialTransfer: listing.offersOfficialTransfer,
   };
 }
 

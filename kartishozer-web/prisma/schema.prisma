@@ -56,7 +56,14 @@ model Vendor {
   user               User              @relation(fields: [userId], references: [id])
   displayName        String
   isVerified         Boolean           @default(false)
-  verificationLevel  VerificationLevel @default(NONE)
+  // Every vendor reaching this row already completed Clerk's own signup
+  // verification (email always, phone when they added one) before they
+  // could create anything at all — so BASIC, not NONE, is the true
+  // starting state. FULL is reached either by an admin's manual VERIFY
+  // action or automatically once assessListingRisk's trustedSellerCredit
+  // criteria are met (see listings.actions.ts) — real KYC (government-ID
+  // verification) is a deliberate, not-yet-built follow-up on top of FULL.
+  verificationLevel  VerificationLevel @default(BASIC)
   status             VendorStatus      @default(ACTIVE)
   bankAccountRef     String?
   createdAt          DateTime          @default(now())
@@ -161,6 +168,14 @@ model Listing {
   priceAgorot        Int
   faceValueAgorot    Int
   isSafePassExchange Boolean       @default(true)
+  // Self-reported by the seller at listing time — whether they'll use the
+  // original ticketing provider's own transfer feature (e.g. an account-
+  // to-account transfer), when that provider has one. Nothing here
+  // verifies this actually happened; there's no integration with any
+  // ticketing provider to check against. It's surfaced to buyers as a
+  // preferred signal, same spirit as isSafePassExchange above, not a
+  // guarantee.
+  offersOfficialTransfer Boolean   @default(false)
   note               String?
   riskScore          Int           @default(0)
   riskLevel          RiskLevel     @default(LOW)
