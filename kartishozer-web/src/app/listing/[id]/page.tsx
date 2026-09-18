@@ -12,6 +12,7 @@ import {
 import { getListing, getEvent, computeOrderTotals } from "@/lib/queries/catalog";
 import { getCategory } from "@/lib/mock/categories";
 import { getAppUser } from "@/lib/auth/server";
+import { recordListingViewed } from "@/lib/analytics";
 import { fmtAgorot, fmtEventDate, fmtTime } from "@/lib/format";
 import { markupPercent } from "@/lib/types";
 import { TopBar } from "@/components/layout/TopBar";
@@ -59,6 +60,8 @@ export default async function ListingDetailsPage({ params }: Props) {
   const user = await getAppUser();
   const isOwner = !!user?.vendor && user.vendor.id === listing.seller.id;
   const canManage = listing.status === "ACTIVE" || listing.status === "PENDING_REVIEW";
+
+  await recordListingViewed({ listingId: listing.id, viewerUserId: user?.id ?? null, isOwnListing: isOwner });
 
   return (
     <div className="pb-28">

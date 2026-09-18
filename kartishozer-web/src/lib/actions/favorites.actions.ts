@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getAppUser } from "@/lib/auth/server";
+import { recordFavoriteEvent } from "@/lib/analytics";
 
 export async function toggleFavoriteAction(listingId: string): Promise<{ favorited: boolean } | { error: string }> {
   const user = await getAppUser();
@@ -15,11 +16,13 @@ export async function toggleFavoriteAction(listingId: string): Promise<{ favorit
   if (existing) {
     await db.favorite.delete({ where: { id: existing.id } });
     revalidatePath("/favorites");
+    await recordFavoriteEvent({ added: false, userId: user.id, listingId });
     return { favorited: false };
   }
 
   await db.favorite.create({ data: { userId: user.id, listingId } });
   revalidatePath("/favorites");
+  await recordFavoriteEvent({ added: true, userId: user.id, listingId });
   return { favorited: true };
 }
 
@@ -36,10 +39,12 @@ export async function toggleEventFavoriteAction(
   if (existing) {
     await db.eventFavorite.delete({ where: { id: existing.id } });
     revalidatePath("/favorites");
+    await recordFavoriteEvent({ added: false, userId: user.id, eventId });
     return { favorited: false };
   }
 
   await db.eventFavorite.create({ data: { userId: user.id, eventId } });
   revalidatePath("/favorites");
+  await recordFavoriteEvent({ added: true, userId: user.id, eventId });
   return { favorited: true };
 }

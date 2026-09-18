@@ -5,8 +5,10 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { heIL } from "@clerk/localizations";
 import { CLERK_ENABLED, CLERK_PUBLISHABLE_KEY } from "@/lib/auth/config";
 import { AppShell } from "@/components/layout/AppShell";
+import { AttributionTracker } from "@/components/AttributionTracker";
 import { getAppUser } from "@/lib/auth/server";
 import { getUnreadConversationCount } from "@/lib/queries/messages";
+import { linkVisitorToUser } from "@/lib/analytics";
 
 const heebo = Heebo({
   subsets: ["hebrew", "latin"],
@@ -57,10 +59,12 @@ const clerkAppearance = {
 async function Shell({ children }: { children: React.ReactNode }) {
   const user = await getAppUser();
   const unreadCount = user ? await getUnreadConversationCount(user.id) : 0;
+  if (user) await linkVisitorToUser(user.id);
 
   return (
     <html lang="he" dir="rtl" className={heebo.variable}>
       <body className="font-sans antialiased">
+        <AttributionTracker />
         <AppShell unreadCount={unreadCount}>{children}</AppShell>
       </body>
     </html>

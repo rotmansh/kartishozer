@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getAppUser } from "@/lib/auth/server";
 import { getPaymentProvider } from "@/lib/payments/provider.factory";
 import { computeOrderTotals, getPlatformFees } from "@/lib/queries/catalog";
+import { recordPaymentFunnelEvent } from "@/lib/analytics";
 
 type CreateOrderResult = { orderId: string } | { error: string };
 
@@ -31,6 +32,8 @@ export async function createOrderAction(listingId: string): Promise<CreateOrderR
   const sellerFeeAgorot = Math.round((listing.priceAgorot * fees.sellerFeePercent) / 100);
   const sellerProceedsAgorot = listing.priceAgorot - sellerFeeAgorot;
 
+  await recordPaymentFunnelEvent({ type: "PAYMENT_STARTED", listingId, userId: user.id });
+
   const provider = getPaymentProvider();
   const intent = await provider.createIntent({
     amountAgorot: totals.totalAgorot,
@@ -38,7 +41,15 @@ export async function createOrderAction(listingId: string): Promise<CreateOrderR
     metadata: { listingId, buyerId: user.id },
   });
   const confirmed = await provider.confirmIntent(intent.providerIntentId);
-  if (confirmed.status !== "SUCCEEDED") return { error: "התשלום נכשל, נסו שוב" };
+  if (confirmed.status !== "SUCCEEDED") {
+    await recordPaymentFunnelEvent({
+      type: "PAYMENT_FAILED",
+      listingId,
+      userId: user.id,
+      metadata: { providerStatus: confirmed.status },
+    });
+    return { error: "התשלום נכשל, נסו שוב" };
+  }
 
   const order = await db.$transaction(async (tx) => {
     const created = await tx.order.create({
@@ -71,6 +82,17 @@ export async function createOrderAction(listingId: string): Promise<CreateOrderR
           type: "PLATFORM_FEE_BUYER",
           amountAgorot: totals.buyerFeeAgorot,
           debitAccount: "BUYER",
+          creditAccount: "PLATFORM_REVENUE",
+        },
+        // Previously only implicit inside SELLER_PROCEEDS below (proceeds
+        // = price - this fee) — recorded as its own line now so total
+        // platform revenue is reconstructable from LedgerEntry alone,
+        // without changing what the seller actually nets.
+        {
+          orderId: created.id,
+          type: "PLATFORM_FEE_SELLER",
+          amountAgorot: sellerFeeAgorot,
+          debitAccount: "PLATFORM_ESCROW",
           creditAccount: "PLATFORM_REVENUE",
         },
         {

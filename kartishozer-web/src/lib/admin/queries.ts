@@ -43,9 +43,13 @@ export async function getPlatformStats(): Promise<PlatformStats> {
       _count: { id: true },
     }),
 
+    // Both the buyer-side and seller-side fee are platform revenue — an
+    // order created before PLATFORM_FEE_SELLER existed only has the
+    // buyer-side line, so this simply reports whatever revenue lines
+    // actually exist per order rather than assuming both are always present.
     db.ledgerEntry.aggregate({
       where: {
-        type: "PLATFORM_FEE_BUYER",
+        type: { in: ["PLATFORM_FEE_BUYER", "PLATFORM_FEE_SELLER"] },
         creditAccount: "PLATFORM_REVENUE",
         createdAt: { gte: d30 },
       },

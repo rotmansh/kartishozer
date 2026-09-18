@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { getListing, getEvent, computeOrderTotals } from "@/lib/queries/catalog";
+import { getAppUser } from "@/lib/auth/server";
+import { recordCheckoutStarted } from "@/lib/analytics";
 import { CheckoutClient } from "./CheckoutClient";
 
 type Props = { params: { listingId: string } };
@@ -14,6 +16,11 @@ export default async function CheckoutPage({ params }: Props) {
   const listing = await getListing(params.listingId);
   const event = listing ? await getEvent(listing.eventId) : null;
   const totals = listing ? await computeOrderTotals(listing.priceAgorot) : null;
+
+  if (listing) {
+    const user = await getAppUser();
+    if (user) await recordCheckoutStarted({ listingId: listing.id, userId: user.id });
+  }
 
   return <CheckoutClient listing={listing} event={event} totals={totals} />;
 }

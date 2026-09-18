@@ -523,6 +523,13 @@ model Payout {
 
 enum LedgerEntryType {
   PLATFORM_FEE_BUYER
+  // The seller's fee was always subtracted when computing SELLER_PROCEEDS
+  // below (see createOrderAction), so the money was never wrong — but that
+  // fee had no ledger line of its own, so total platform revenue could
+  // only ever be reconstructed correctly from PLATFORM_FEE_BUYER, silently
+  // missing this half of every order's take. Additive: existing entries
+  // and the SELLER_PROCEEDS amount are unchanged.
+  PLATFORM_FEE_SELLER
   SELLER_PROCEEDS
   REFUND_BUYER
 }
@@ -571,4 +578,86 @@ model AuditLog {
 
   @@index([resourceType, resourceId])
   @@index([createdAt])
+}
+
+// ── Analytics: visitors, attribution, business-event funnel ────
+// P2 of the data-retention/analytics requirements. Deliberately narrow:
+// business events meaningful enough to reconstruct a funnel step or a
+// listing's view/conversion numbers later, never every click. Nothing
+// here is a mutable counter — a listing's "views" and "unique viewers"
+// are always computed by querying AnalyticsEvent, so the source data
+// survives even if the definition of "unique" changes later.
+
+// One row per anonymous browser, identified by a long-lived, random,
+// httpOnly cookie (`kh_vid` — see src/lib/analytics.ts) that carries no
+// information about the device itself (no IP/user-agent/canvas
+// fingerprinting of any kind). Exists purely so a pre-signup funnel
+// (visitor -> signup) and acquisition attribution can be reconstructed;
+// once the visitor signs up, `userId` links this row to their real
+// account (see linkVisitorToUser) for the rest of that browser's life.
+model Visitor {
+  id     String  @id
+  // Not a `@relation` on purpose, same convention as AuditLog.userId —
+  // this table must never be blocked by, or accidentally cascade from,
+  // changes to User.
+  userId String? @unique
+
+  firstTouchAt     DateTime @default(now())
+  firstUtmSource   String?
+  firstUtmMedium   String?
+  firstUtmCampaign String?
+  firstUtmContent  String?
+  firstUtmTerm     String?
+  firstReferrer    String?
+  firstLandingPath String?
+
+  // Updated only when a later visit actually carries new attribution (a
+  // fresh utm_* param, or a referrer from outside the site) — a plain
+  // same-site navigation never overwrites this, so it stays meaningful as
+  // "the last real marketing touch", not "whatever page they looked at
+  // most recently".
+  lastTouchAt      DateTime @default(now())
+  lastUtmSource    String?
+  lastUtmMedium    String?
+  lastUtmCampaign  String?
+  lastUtmContent   String?
+  lastUtmTerm      String?
+  lastReferrer     String?
+  lastLandingPath  String?
+}
+
+enum AnalyticsEventType {
+  // Fired once per browser tab session (not every page) — the backbone
+  // for DAU/WAU/MAU and general traffic, independent of whether that
+  // visit happened to touch any specific funnel step below.
+  SITE_VISIT
+  LISTING_VIEWED
+  FAVORITE_ADDED
+  FAVORITE_REMOVED
+  CHECKOUT_STARTED
+  PAYMENT_STARTED
+  PAYMENT_FAILED
+  SELL_WIZARD_STARTED
+}
+
+model AnalyticsEvent {
+  id        String             @id @default(cuid())
+  type      AnalyticsEventType
+  // None of these four are `@relation` — same reasoning as AuditLog: an
+  // ever-growing append-only log must never be coupled to the lifecycle
+  // of the rows it references, and a soft-deleted/renamed listing must
+  // never make a past event unreadable.
+  visitorId String?
+  userId    String?
+  listingId String?
+  eventId   String?
+  orderId   String?
+  metadata  Json?
+  createdAt DateTime           @default(now())
+
+  @@index([listingId, type])
+  @@index([type, createdAt])
+  @@index([userId])
+  @@index([visitorId])
+  @@index([orderId])
 }
