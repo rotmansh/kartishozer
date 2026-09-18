@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getAppUser } from "@/lib/auth/server";
 import { getSiteUrl } from "@/lib/site-url";
 import { VISITOR_COOKIE, recordSiteVisit } from "@/lib/analytics";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 const VISITOR_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
@@ -29,6 +30,13 @@ export async function recordVisitAction(input: {
   utmContent: string | null;
   utmTerm: string | null;
 }): Promise<void> {
+  // The only action here reachable with zero authentication — there's no
+  // userId to key a limit on, so this is IP-based. Skipped (not blocked)
+  // when no IP is available at all, rather than lumping every visitor
+  // into one shared bucket.
+  const ip = getClientIp();
+  if (ip && !(await checkRateLimit(`recordVisit:${ip}`, 30, 10 * 60_000))) return;
+
   const store = cookies();
   let vid = store.get(VISITOR_COOKIE)?.value;
   const isNewVisitor = !vid;

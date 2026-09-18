@@ -731,3 +731,18 @@ model AnalyticsEvent {
   @@index([visitorId])
   @@index([orderId])
 }
+
+// ── Rate limiting ─────────────────────────────────────────────
+// A minimal sliding-window limiter backed by Postgres (no new external
+// service to set up) — see src/lib/rateLimit.ts. One row per attempt,
+// `key` already encodes both the action and the identity being limited
+// (e.g. "createOrder:<userId>", "recordVisit:<ip>"). Rows are pruned
+// opportunistically by the same helper, so this table never grows
+// unbounded even without a dedicated cleanup job.
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}

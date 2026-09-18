@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getAppUser } from "@/lib/auth/server";
 import { getFileStorageProvider } from "@/lib/storage/provider.factory";
 import { RISK_ENGINE_VERSION } from "@/lib/riskEngineVersion";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 type ActionResult<T = { success: true }> = T | { error: string };
 
@@ -30,6 +31,12 @@ const DUPLICATE_FILE_SCORE_PENALTY = 50;
 export async function uploadTicketFileAction(formData: FormData): Promise<ActionResult> {
   const user = await getAppUser();
   if (!user?.vendor) return { error: "יש להתחבר כמוכר/ת" };
+
+  // Protects storage costs — a seller replacing their ticket file a
+  // handful of times is normal, dozens of uploads in an hour isn't.
+  if (!(await checkRateLimit(`uploadTicketFile:${user.id}`, 10, 60 * 60_000))) {
+    return { error: "יותר מדי קבצים הועלו בזמן קצר — נסו שוב מאוחר יותר" };
+  }
 
   const listingId = String(formData.get("listingId") ?? "");
   const file = formData.get("file");

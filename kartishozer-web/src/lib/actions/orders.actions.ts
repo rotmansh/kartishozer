@@ -7,6 +7,7 @@ import { getPaymentProvider } from "@/lib/payments/provider.factory";
 import { computeOrderTotals, getPlatformFees } from "@/lib/queries/catalog";
 import { recordPaymentFunnelEvent } from "@/lib/analytics";
 import { PRICING_VERSION } from "@/lib/pricingVersion";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 type CreateOrderResult = { orderId: string } | { error: string };
 
@@ -18,6 +19,13 @@ type CreateOrderResult = { orderId: string } | { error: string };
 export async function createOrderAction(listingId: string): Promise<CreateOrderResult> {
   const user = await getAppUser();
   if (!user) return { error: "יש להתחבר כדי לבצע רכישה" };
+
+  // Protects against hammering the payment provider (a real one would
+  // charge per attempt) — generous enough that no real buyer ever
+  // notices it.
+  if (!(await checkRateLimit(`createOrder:${user.id}`, 10, 10 * 60_000))) {
+    return { error: "יותר מדי ניסיונות רכישה בזמן קצר — נסו שוב בעוד כמה דקות" };
+  }
 
   const listing = await db.listing.findFirst({
     where: { id: listingId, status: "ACTIVE", deletedAt: null },

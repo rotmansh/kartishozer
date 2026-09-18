@@ -7,6 +7,7 @@ import { getAppUser } from "@/lib/auth/server";
 import { sendDisputeUpdateEmail } from "@/lib/notifications/email";
 import { sendPushForDisputeUpdate } from "@/lib/notifications/push";
 import { getFileStorageProvider } from "@/lib/storage/provider.factory";
+import { checkRateLimit } from "@/lib/rateLimit";
 import type { OrderStatus, DisputeEvidenceUploader } from "@prisma/client";
 
 type ActionResult<T = { success: true }> = T | { error: string };
@@ -75,6 +76,10 @@ export async function openDisputeAction(
 ): Promise<ActionResult<{ disputeId: string }>> {
   const user = await getAppUser();
   if (!user) return { error: "יש להתחבר כדי לפתוח פנייה" };
+
+  if (!(await checkRateLimit(`openDispute:${user.id}`, 5, 10 * 60_000))) {
+    return { error: "יותר מדי פניות בזמן קצר — נסו שוב בעוד כמה דקות" };
+  }
 
   const parsed = openDisputeSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "פרטים לא תקינים" };
@@ -232,6 +237,12 @@ const addEvidenceSchema = z.object({
 export async function addDisputeEvidenceAction(formData: FormData): Promise<ActionResult> {
   const user = await getAppUser();
   if (!user) return { error: "יש להתחבר כדי להעלות קובץ" };
+
+  // Protects storage costs — a real dispute needs a handful of files at
+  // most, never dozens in an hour.
+  if (!(await checkRateLimit(`uploadEvidence:${user.id}`, 10, 60 * 60_000))) {
+    return { error: "יותר מדי קבצים הועלו בזמן קצר — נסו שוב מאוחר יותר" };
+  }
 
   const parsed = addEvidenceSchema.safeParse({
     disputeId: formData.get("disputeId"),
