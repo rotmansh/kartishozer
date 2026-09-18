@@ -23,10 +23,14 @@ export const metadata: Metadata = {
   description: "קונים ומוכרים כרטיסים ביד שנייה — בבטחה.",
 };
 
+// No maximumScale — a fixed 1x zoom cap fails WCAG 1.4.4 (Resize Text)
+// outright, since it stops anyone from pinch-zooming text they can't
+// read comfortably. Confirmed via axe-core: this was the one violation
+// flagged identically on every single page, unrelated to any specific
+// color/component.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
   themeColor: "#FAF7F5",
 };
 

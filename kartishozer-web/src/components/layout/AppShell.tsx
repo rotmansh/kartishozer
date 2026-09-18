@@ -23,9 +23,21 @@ export function AppShell({ children, unreadCount = 0 }: { children: ReactNode; u
 
   return (
     <div className="app-shell shadow-[0_0_60px_rgba(0,0,0,0.06)]">
+      <a
+        href="#main-content"
+        className="fixed top-2 right-2 z-[100] -translate-y-24 focus:translate-y-0 transition-transform rounded-lg bg-ink-900 text-white text-xs font-bold px-3 py-2"
+      >
+        דלג לתוכן הראשי
+      </a>
       <WelcomeOnboarding />
       <PreviewBanner />
-      <div className={hideNav ? "" : "pb-24"}>{children}</div>
+      {/* tabIndex={-1} makes this programmatically focusable — without it,
+          jumping here via the skip link above moves the scroll position
+          but not keyboard focus in every browser, so a screen reader user
+          wouldn't reliably land where the link claims to send them. */}
+      <div id="main-content" tabIndex={-1} className={hideNav ? "" : "pb-24"}>
+        {children}
+      </div>
       {!hideNav && <BottomNav unreadCount={unreadCount} />}
     </div>
   );

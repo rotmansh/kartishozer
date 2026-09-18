@@ -52,14 +52,18 @@ export function BottomNav({ unreadCount = 0 }: { unreadCount?: number }) {
                 <span className="relative">
                   <Icon
                     size={22}
-                    className={active ? "text-brand" : "text-ink-300"}
+                    // ink-300 measured at 2.2:1 against this nav's actual
+                    // background (axe-core caught it on every page) — below
+                    // even the 3:1 minimum for a meaningful UI icon, let
+                    // alone text. ink-500 clears 5:1 easily.
+                    className={active ? "text-brand" : "text-ink-500"}
                     strokeWidth={active ? 2.4 : 2}
                   />
                   {item.href === "/messages" && unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1.5 h-3.5 w-3.5 rounded-full bg-brand border-2 border-white" />
                   )}
                 </span>
-                <span className={cn("text-[10px] font-bold", active ? "text-brand" : "text-ink-300")}>
+                <span className={cn("text-[10px] font-bold", active ? "text-brand" : "text-ink-500")}>
                   {item.label}
                 </span>
               </Link>
