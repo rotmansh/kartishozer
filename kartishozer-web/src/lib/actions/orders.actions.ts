@@ -13,13 +13,25 @@ type CreateOrderResult = { orderId: string } | { error: string };
 type ActionResult = { success: true } | { error: string };
 
 /**
- * Buying a listing buys the whole thing (matches the existing checkout UI,
- * which has no partial-quantity selector) — payment goes through the mock
- * provider only (see src/lib/payments), no real charge.
+ * Buying a listing can now buy a subset of its quantity (see the checkout
+ * UI's quantity stepper) — priceAgorot/faceValueAgorot on Listing are
+ * always "total for however many tickets are currently listed" (never a
+ * per-unit price; see checkMarkupAllowed/assessListingRisk, which compare
+ * them directly with no multiplication), so a partial purchase pays a
+ * proportional slice of the current total and the remaining Listing row
+ * has both its quantity and its total price/face-value reduced by that
+ * same slice — every other reader of Listing.priceAgorot keeps working
+ * unchanged, since the field's meaning never changes, only its value.
+ * Payment goes through the mock provider only (see src/lib/payments), no
+ * real charge.
  */
-export async function createOrderAction(listingId: string): Promise<CreateOrderResult> {
+export async function createOrderAction(listingId: string, requestedQuantity: number): Promise<CreateOrderResult> {
   const user = await getAppUser();
   if (!user) return { error: "יש להתחבר כדי לבצע רכישה" };
+
+  if (!Number.isInteger(requestedQuantity) || requestedQuantity < 1) {
+    return { error: "כמות לא תקינה" };
+  }
 
   // Protects against hammering the payment provider (a real one would
   // charge per attempt) — generous enough that no real buyer ever
@@ -36,11 +48,22 @@ export async function createOrderAction(listingId: string): Promise<CreateOrderR
   if (listing.vendor.userId === user.id) {
     return { error: "לא ניתן לקנות כרטיס שפרסמתם בעצמכם" };
   }
+  if (requestedQuantity > listing.quantity) {
+    return { error: "הכמות המבוקשת אינה זמינה יותר במודעה זו" };
+  }
 
-  const totals = await computeOrderTotals(listing.priceAgorot);
+  // Rounded once here, then the remaining listing gets exactly
+  // (original - this slice) by subtraction rather than its own separate
+  // rounding — so repeated partial sales of the same listing can never
+  // drift the total away from what was originally listed.
+  const subtotalPriceAgorot = Math.round((listing.priceAgorot * requestedQuantity) / listing.quantity);
+  const subtotalFaceValueAgorot = Math.round((listing.faceValueAgorot * requestedQuantity) / listing.quantity);
+  const remainingQuantity = listing.quantity - requestedQuantity;
+
+  const totals = await computeOrderTotals(subtotalPriceAgorot);
   const fees = await getPlatformFees();
-  const sellerFeeAgorot = Math.round((listing.priceAgorot * fees.sellerFeePercent) / 100);
-  const sellerProceedsAgorot = listing.priceAgorot - sellerFeeAgorot;
+  const sellerFeeAgorot = Math.round((subtotalPriceAgorot * fees.sellerFeePercent) / 100);
+  const sellerProceedsAgorot = subtotalPriceAgorot - sellerFeeAgorot;
 
   await recordPaymentFunnelEvent({ type: "PAYMENT_STARTED", listingId, userId: user.id });
 
@@ -62,14 +85,30 @@ export async function createOrderAction(listingId: string): Promise<CreateOrderR
   }
 
   const order = await db.$transaction(async (tx) => {
+    // Conditional on the exact quantity/status just read — if another
+    // buyer bought some or all of this listing in the meantime, this
+    // matches zero rows instead of overselling past what's actually left.
+    const guarded = await tx.listing.updateMany({
+      where: { id: listing.id, status: "ACTIVE", quantity: listing.quantity },
+      data: {
+        quantity: remainingQuantity,
+        priceAgorot: listing.priceAgorot - subtotalPriceAgorot,
+        faceValueAgorot: listing.faceValueAgorot - subtotalFaceValueAgorot,
+        status: remainingQuantity === 0 ? "SOLD" : "ACTIVE",
+      },
+    });
+    if (guarded.count === 0) {
+      throw new Error("LISTING_CHANGED");
+    }
+
     const created = await tx.order.create({
       data: {
         listingId: listing.id,
         eventId: listing.eventId,
         buyerId: user.id,
         vendorId: listing.vendorId,
-        quantity: listing.quantity,
-        priceAgorot: listing.priceAgorot,
+        quantity: requestedQuantity,
+        priceAgorot: subtotalPriceAgorot,
         buyerFeeAgorot: totals.buyerFeeAgorot,
         totalAgorot: totals.totalAgorot,
         status: "PAID",
@@ -78,11 +117,6 @@ export async function createOrderAction(listingId: string): Promise<CreateOrderR
         providerIntentId: intent.providerIntentId,
         paidAt: new Date(),
       },
-    });
-
-    await tx.listing.update({
-      where: { id: listing.id },
-      data: { status: "SOLD" },
     });
 
     await tx.ledgerEntry.createMany({
@@ -159,7 +193,17 @@ export async function createOrderAction(listingId: string): Promise<CreateOrderR
     });
 
     return created;
+  }).catch((err) => {
+    if (err instanceof Error && err.message === "LISTING_CHANGED") return null;
+    throw err;
   });
+
+  if (!order) {
+    // The payment "succeeded" against the mock provider, but no Order/
+    // ledger rows were ever created — nothing to reconcile or refund,
+    // since nothing real was charged (see the module doc comment).
+    return { error: "המודעה השתנתה בזמן שביצעתם את הרכישה — נסו שוב" };
+  }
 
   revalidatePath("/profile");
   revalidatePath(`/listing/${listing.id}`);

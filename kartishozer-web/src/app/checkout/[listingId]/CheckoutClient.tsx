@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   Calendar,
   MapPin,
+  Minus,
+  Plus,
 } from "lucide-react";
 import type { Listing, EventItem } from "@/lib/types";
 import { fmtAgorot, fmtEventDate, fmtTime } from "@/lib/format";
@@ -27,12 +29,15 @@ export function CheckoutClient({
   listing,
   event,
   totals,
+  buyerFeePercent,
 }: {
   listing: Listing | null;
   event: EventItem | null;
   totals: Totals | null;
+  buyerFeePercent: number;
 }) {
   const [method, setMethod] = useState<PaymentMethod>("card");
+  const [quantity, setQuantity] = useState(listing?.quantity ?? 1);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -49,10 +54,19 @@ export function CheckoutClient({
     );
   }
 
+  // Display-only preview, mirroring createOrderAction's own proportional
+  // math exactly (priceAgorot is always "total for the currently-listed
+  // quantity", never a per-unit price — see that action's doc comment).
+  // The server recomputes and charges authoritatively regardless of what's
+  // shown here; this never doubles as the real charge.
+  const priceAgorot = Math.round((listing.priceAgorot * quantity) / listing.quantity);
+  const buyerFeeAgorot = Math.round((priceAgorot * buyerFeePercent) / 100);
+  const totalAgorot = priceAgorot + buyerFeeAgorot;
+
   async function handleConfirm() {
     setProcessing(true);
     setError(null);
-    const result = await createOrderAction(listing!.id);
+    const result = await createOrderAction(listing!.id, quantity);
     setProcessing(false);
     if ("error" in result) {
       setError(result.error);
@@ -107,9 +121,40 @@ export function CheckoutClient({
         </div>
         <div className="flex items-center justify-between mt-3.5 pt-3.5 border-t border-ink-900/5">
           <SellerBadge seller={listing.seller} size="sm" />
-          <span className="text-xs font-bold text-ink-500">{listing.quantity} כרטיסים</span>
+          <span className="text-xs font-bold text-ink-500">{listing.quantity} כרטיסים זמינים</span>
         </div>
       </div>
+
+      {/* Quantity — only worth showing a stepper when there's something to
+          split; a single-ticket listing has nothing to choose. */}
+      {listing.quantity > 1 && (
+        <div className="mx-4 mt-4 bg-white rounded-2xl border border-ink-900/5 shadow-card p-4 flex items-center justify-between">
+          <p className="text-sm font-bold text-ink-900">כמה כרטיסים לקנות?</p>
+          <div className="flex items-center gap-3" role="group" aria-label="כמות כרטיסים לרכישה">
+            <button
+              type="button"
+              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+              disabled={quantity <= 1}
+              aria-label="הפחתת כמות"
+              className="tap h-9 w-9 rounded-xl bg-ink-100 flex items-center justify-center disabled:opacity-40"
+            >
+              <Minus size={16} />
+            </button>
+            <span className="text-base font-black text-ink-900 w-6 text-center" aria-live="polite">
+              {quantity}
+            </span>
+            <button
+              type="button"
+              onClick={() => setQuantity((q) => Math.min(listing.quantity, q + 1))}
+              disabled={quantity >= listing.quantity}
+              aria-label="הוספת כמות"
+              className="tap h-9 w-9 rounded-xl bg-ink-100 flex items-center justify-center disabled:opacity-40"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Payment method */}
       <div className="mx-4 mt-4">
@@ -159,8 +204,10 @@ export function CheckoutClient({
       {/* Price breakdown */}
       <div className="mx-4 mt-4 bg-white rounded-2xl border border-ink-900/5 shadow-card p-4 space-y-2.5">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-ink-500">מחיר הכרטיס</span>
-          <span className="text-ink-700">{fmtAgorot(totals.priceAgorot)}</span>
+          <span className="text-ink-500">
+            מחיר הכרטיס{listing.quantity > 1 && ` (${quantity} מתוך ${listing.quantity})`}
+          </span>
+          <span className="text-ink-700">{fmtAgorot(priceAgorot)}</span>
         </div>
         <div className="flex items-center justify-between text-sm">
           <span className="text-ink-500 flex items-center gap-1.5">
@@ -168,19 +215,19 @@ export function CheckoutClient({
             {/* Reflects whatever buyer_fee_percent actually is right now —
                 if/when a real fee gets configured later, this badge simply
                 stops appearing on its own, no code change needed. */}
-            {totals.buyerFeeAgorot === 0 && (
+            {buyerFeeAgorot === 0 && (
               <span className="text-[10px] font-bold text-accent-600 bg-accent-50 rounded-full px-2 py-0.5">
                 בהשקה — חינם!
               </span>
             )}
           </span>
-          <span className={totals.buyerFeeAgorot === 0 ? "text-accent-600 font-bold" : "text-ink-700"}>
-            {fmtAgorot(totals.buyerFeeAgorot)}
+          <span className={buyerFeeAgorot === 0 ? "text-accent-600 font-bold" : "text-ink-700"}>
+            {fmtAgorot(buyerFeeAgorot)}
           </span>
         </div>
         <div className="flex items-center justify-between pt-2 border-t border-ink-900/5">
           <span className="font-black text-ink-900">סה&quot;כ לתשלום</span>
-          <span className="font-black text-brand text-lg">{fmtAgorot(totals.totalAgorot)}</span>
+          <span className="font-black text-brand text-lg">{fmtAgorot(totalAgorot)}</span>
         </div>
       </div>
 
@@ -203,7 +250,7 @@ export function CheckoutClient({
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
       >
         <Button size="lg" fullWidth disabled={processing} onClick={handleConfirm}>
-          {processing ? "מעבד…" : `אישור הזמנה (דמו) · ${fmtAgorot(totals.totalAgorot)}`}
+          {processing ? "מעבד…" : `אישור הזמנה (דמו) · ${fmtAgorot(totalAgorot)}`}
         </Button>
       </div>
     </div>
