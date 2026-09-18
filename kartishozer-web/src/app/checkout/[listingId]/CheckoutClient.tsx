@@ -163,8 +163,20 @@ export function CheckoutClient({
           <span className="text-ink-700">{fmtAgorot(totals.priceAgorot)}</span>
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-ink-500">עמלת שירות</span>
-          <span className="text-ink-700">{fmtAgorot(totals.buyerFeeAgorot)}</span>
+          <span className="text-ink-500 flex items-center gap-1.5">
+            עמלת שירות
+            {/* Reflects whatever buyer_fee_percent actually is right now —
+                if/when a real fee gets configured later, this badge simply
+                stops appearing on its own, no code change needed. */}
+            {totals.buyerFeeAgorot === 0 && (
+              <span className="text-[10px] font-bold text-accent-600 bg-accent-50 rounded-full px-2 py-0.5">
+                בהשקה — חינם!
+              </span>
+            )}
+          </span>
+          <span className={totals.buyerFeeAgorot === 0 ? "text-accent-600 font-bold" : "text-ink-700"}>
+            {fmtAgorot(totals.buyerFeeAgorot)}
+          </span>
         </div>
         <div className="flex items-center justify-between pt-2 border-t border-ink-900/5">
           <span className="font-black text-ink-900">סה&quot;כ לתשלום</span>
