@@ -72,6 +72,15 @@ export type AdminDispute = {
   createdAt: Date;
   resolvedAt: Date | null;
   resolution: string | null;
+  sellerResponse: string | null;
+  sellerRespondedAt: Date | null;
+  evidence: {
+    id: string;
+    uploaderRole: string;
+    mimeType: string;
+    createdAt: Date;
+    note: string | null;
+  }[];
   order: {
     id: string;
     totalAgorot: number;

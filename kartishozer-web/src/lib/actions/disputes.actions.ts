@@ -6,9 +6,37 @@ import { db } from "@/lib/db";
 import { getAppUser } from "@/lib/auth/server";
 import { sendDisputeUpdateEmail } from "@/lib/notifications/email";
 import { sendPushForDisputeUpdate } from "@/lib/notifications/push";
-import type { OrderStatus } from "@prisma/client";
+import { getFileStorageProvider } from "@/lib/storage/provider.factory";
+import type { OrderStatus, DisputeEvidenceUploader } from "@prisma/client";
 
 type ActionResult<T = { success: true }> = T | { error: string };
+
+const OPEN_DISPUTE_STATUSES = ["OPEN", "UNDER_REVIEW"] as const;
+const ALLOWED_EVIDENCE_MIME_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+const MAX_EVIDENCE_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
+/**
+ * Both new actions below need the same check: is this user the buyer or
+ * the seller on the order this dispute belongs to (an admin uses the
+ * separate /admin/disputes flow, not these). Centralized so "you're not
+ * part of this dispute" is enforced identically everywhere, not
+ * re-implemented slightly differently per action.
+ */
+async function loadDisputeForParty(disputeId: string, userId: string) {
+  const dispute = await db.dispute.findUnique({
+    where: { id: disputeId },
+    include: { order: { include: { vendor: { select: { userId: true } } } } },
+  });
+  const notFound = { error: "הפנייה לא נמצאה" } as const;
+  const noAccess = { error: "אין לכם גישה לפנייה זו" } as const;
+  if (!dispute) return notFound;
+
+  const isBuyer = dispute.order.buyerId === userId;
+  const isSeller = dispute.order.vendor.userId === userId;
+  if (!isBuyer && !isSeller) return noAccess;
+
+  return { dispute, role: (isBuyer ? "BUYER" : "SELLER") as DisputeEvidenceUploader };
+}
 
 // TICKET_DELIVERED is never actually set anywhere in the app today (the
 // buyer/seller hand off the ticket over the order's chat, not a tracked
@@ -118,4 +146,111 @@ export async function openDisputeAction(
   ]);
 
   return { disputeId: dispute.id };
+}
+
+const sellerRespondSchema = z.object({
+  disputeId: z.string().min(1),
+  response: z.string().min(10, "נא לכתוב תגובה מפורטת (לפחות 10 תווים)").max(1000),
+});
+
+/**
+ * One response per seller, ever, per dispute — this is a chance to give
+ * their side of the story before an admin decides, not a chat. Once
+ * written it's part of the record an admin (and later, the buyer) sees;
+ * editing it after the fact would undermine that. If the dispute closes
+ * before the seller responds, that's their choice to skip it.
+ */
+export async function sellerRespondToDisputeAction(
+  input: z.infer<typeof sellerRespondSchema>
+): Promise<ActionResult> {
+  const user = await getAppUser();
+  if (!user) return { error: "יש להתחבר כדי להגיב" };
+
+  const parsed = sellerRespondSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "פרטים לא תקינים" };
+  const { disputeId, response } = parsed.data;
+
+  const loaded = await loadDisputeForParty(disputeId, user.id);
+  if ("error" in loaded) return { error: loaded.error };
+  if (loaded.role !== "SELLER") return { error: "רק המוכר יכול להגיב לפנייה זו" };
+
+  const { dispute } = loaded;
+  if (!OPEN_DISPUTE_STATUSES.includes(dispute.status as (typeof OPEN_DISPUTE_STATUSES)[number])) {
+    return { error: "הפנייה כבר נסגרה" };
+  }
+  if (dispute.sellerResponse) return { error: "כבר הגבת לפנייה זו" };
+
+  await db.dispute.update({
+    where: { id: disputeId },
+    data: { sellerResponse: response, sellerRespondedAt: new Date() },
+  });
+
+  revalidatePath("/profile");
+  revalidatePath("/admin/disputes");
+
+  return { success: true };
+}
+
+const addEvidenceSchema = z.object({
+  disputeId: z.string().min(1),
+  note: z.string().max(500).optional(),
+});
+
+/**
+ * Either party can attach supporting files (screenshots of the event
+ * being cancelled, a rejection message from the venue, etc.) while the
+ * dispute is still open. This is pure data collection for the admin who
+ * resolves the dispute manually — no automated decision is made from it.
+ */
+export async function addDisputeEvidenceAction(formData: FormData): Promise<ActionResult> {
+  const user = await getAppUser();
+  if (!user) return { error: "יש להתחבר כדי להעלות קובץ" };
+
+  const parsed = addEvidenceSchema.safeParse({
+    disputeId: formData.get("disputeId"),
+    note: formData.get("note") || undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "פרטים לא תקינים" };
+  const { disputeId, note } = parsed.data;
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { error: "נא לבחור קובץ" };
+  if (!ALLOWED_EVIDENCE_MIME_TYPES.includes(file.type)) {
+    return { error: "סוג קובץ לא נתמך — יש להעלות תמונה (JPG/PNG) או PDF" };
+  }
+  if (file.size > MAX_EVIDENCE_FILE_SIZE_BYTES) {
+    return { error: "הקובץ גדול מדי (מקסימום 10MB)" };
+  }
+
+  const loaded = await loadDisputeForParty(disputeId, user.id);
+  if ("error" in loaded) return { error: loaded.error };
+  const { dispute, role } = loaded;
+
+  if (!OPEN_DISPUTE_STATUSES.includes(dispute.status as (typeof OPEN_DISPUTE_STATUSES)[number])) {
+    return { error: "הפנייה כבר נסגרה" };
+  }
+
+  const storage = getFileStorageProvider();
+  if (!storage) return { error: "העלאת קבצים אינה זמינה כרגע" };
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const key = `dispute-evidence/${disputeId}-${Date.now()}`;
+  const { url } = await storage.upload({ key, buffer, contentType: file.type });
+
+  await db.disputeEvidence.create({
+    data: {
+      disputeId,
+      uploadedById: user.id,
+      uploaderRole: role,
+      storageUrl: url,
+      mimeType: file.type,
+      fileSizeBytes: file.size,
+      note: note || null,
+    },
+  });
+
+  revalidatePath("/profile");
+  revalidatePath("/admin/disputes");
+
+  return { success: true };
 }

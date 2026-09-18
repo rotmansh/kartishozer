@@ -37,6 +37,7 @@ model User {
   sentMessages          Message[]
   eventFavorites        EventFavorite[]
   pushSubscriptions     PushSubscription[]
+  disputeEvidenceUploads DisputeEvidence[]
 }
 
 enum VerificationLevel {
@@ -440,12 +441,48 @@ model Dispute {
   status        DisputeStatus @default(OPEN)
   requestedById String
   requestedBy   User          @relation("DisputeRequestedBy", fields: [requestedById], references: [id])
+  // The seller previously had no way to answer a dispute at all — only
+  // the buyer's initial reason and the admin's eventual resolution were
+  // ever recorded. One response per dispute is enough for what this
+  // needs to be right now (collecting both sides' account of what
+  // happened for whenever dispute-handling rules get defined with a
+  // lawyer), not a back-and-forth thread.
+  sellerResponse    String?
+  sellerRespondedAt DateTime?
   resolution    String?
   resolvedById  String?
   resolvedAt    DateTime?
   createdAt     DateTime      @default(now())
 
+  evidence DisputeEvidence[]
+
   @@index([status])
+}
+
+enum DisputeEvidenceUploader {
+  BUYER
+  SELLER
+  ADMIN
+}
+
+// Photos/documents either side attaches to back up their account — held
+// in the same kind of private storage as ticket files (never a public
+// URL), served only through /api/disputes/[disputeId]/evidence/
+// [evidenceId] to the dispute's own buyer/seller or an admin.
+model DisputeEvidence {
+  id            String                  @id @default(cuid())
+  disputeId     String
+  dispute       Dispute                 @relation(fields: [disputeId], references: [id])
+  uploadedById  String
+  uploadedBy    User                    @relation(fields: [uploadedById], references: [id])
+  uploaderRole  DisputeEvidenceUploader
+  storageUrl    String
+  mimeType      String
+  fileSizeBytes Int
+  note          String?
+  createdAt     DateTime                @default(now())
+
+  @@index([disputeId])
 }
 
 // ── Payouts ───────────────────────────────────────────────────

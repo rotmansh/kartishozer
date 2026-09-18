@@ -202,6 +202,7 @@ export async function getAdminDisputes(options: {
           },
         },
         requestedBy: { select: { id: true, email: true } },
+        evidence: { select: { id: true, uploaderRole: true, mimeType: true, createdAt: true, note: true } },
       },
     }),
     db.dispute.count({ where }),
@@ -216,6 +217,9 @@ export async function getAdminDisputes(options: {
       createdAt: r.createdAt,
       resolvedAt: r.resolvedAt,
       resolution: r.resolution,
+      sellerResponse: r.sellerResponse,
+      sellerRespondedAt: r.sellerRespondedAt,
+      evidence: r.evidence,
       order: {
         id: r.order.id,
         totalAgorot: r.order.totalAgorot,

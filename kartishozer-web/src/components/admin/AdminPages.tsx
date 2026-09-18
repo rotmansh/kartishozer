@@ -85,6 +85,29 @@ export async function DisputesPage({
                     {" · "} הזמנה: {fmt(dispute.order.totalAgorot)}
                   </p>
                   <p className="text-xs text-white/50 mt-2 rounded bg-white/5 px-3 py-2">{dispute.reason}</p>
+                  {dispute.sellerResponse && (
+                    <div className="mt-2 rounded bg-white/5 px-3 py-2">
+                      <p className="text-[10px] font-black text-white/30 mb-1">
+                        תגובת מוכר/ת · {fmtDt(dispute.sellerRespondedAt)}
+                      </p>
+                      <p className="text-xs text-white/50">{dispute.sellerResponse}</p>
+                    </div>
+                  )}
+                  {dispute.evidence.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {dispute.evidence.map((ev) => (
+                        <a
+                          key={ev.id}
+                          href={`/api/disputes/${dispute.id}/evidence/${ev.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] font-bold text-brand-400 rounded bg-white/5 px-2 py-1"
+                        >
+                          אסמכתא · {ev.uploaderRole === "BUYER" ? "קונה" : ev.uploaderRole === "SELLER" ? "מוכר" : "צוות"}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {(dispute.status === "OPEN" || dispute.status === "UNDER_REVIEW") && (

@@ -23,6 +23,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { MyListingRow } from "@/components/MyListingRow";
 import { SignOutButton } from "@/components/SignOutButton";
 import { OpenDisputeButton } from "@/components/OpenDisputeButton";
+import { DisputePanel } from "@/components/DisputePanel";
 
 export default async function ProfilePage() {
   const user = await getAppUser();
@@ -59,7 +60,14 @@ export default async function ProfilePage() {
         vendor: true,
         listing: { select: { ticketFile: { select: { id: true } } } },
         conversation: { include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } } },
-        disputes: { where: { status: { in: ["OPEN", "UNDER_REVIEW"] } }, select: { id: true } },
+        disputes: {
+          where: { status: { in: ["OPEN", "UNDER_REVIEW"] } },
+          select: {
+            id: true,
+            sellerResponse: true,
+            evidence: { select: { id: true, uploaderRole: true, mimeType: true, createdAt: true, note: true } },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -69,6 +77,14 @@ export default async function ProfilePage() {
           include: {
             event: true,
             conversation: { include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } } },
+            disputes: {
+              where: { status: { in: ["OPEN", "UNDER_REVIEW"] } },
+              select: {
+                id: true,
+                sellerResponse: true,
+                evidence: { select: { id: true, uploaderRole: true, mimeType: true, createdAt: true, note: true } },
+              },
+            },
           },
           orderBy: { createdAt: "desc" },
         })
@@ -226,9 +242,12 @@ export default async function ProfilePage() {
                   )}
                 {["PAID", "CONFIRMED", "TICKET_DELIVERED"].includes(o.status) &&
                   (o.disputes.length > 0 ? (
-                    <p className="mt-3 pt-3 border-t border-ink-900/5 text-xs font-bold text-accent-600">
-                      פנייה פתוחה — הכסף מוקפא עד לבירור
-                    </p>
+                    <DisputePanel
+                      disputeId={o.disputes[0].id}
+                      role="BUYER"
+                      sellerResponse={o.disputes[0].sellerResponse}
+                      evidence={o.disputes[0].evidence.map((e) => ({ ...e, createdAt: e.createdAt.toISOString() }))}
+                    />
                   ) : (
                     <OpenDisputeButton orderId={o.id} />
                   ))}
@@ -273,6 +292,14 @@ export default async function ProfilePage() {
                         <span className="h-2 w-2 rounded-full bg-brand" />
                       )}
                     </Link>
+                  )}
+                  {o.disputes.length > 0 && (
+                    <DisputePanel
+                      disputeId={o.disputes[0].id}
+                      role="SELLER"
+                      sellerResponse={o.disputes[0].sellerResponse}
+                      evidence={o.disputes[0].evidence.map((e) => ({ ...e, createdAt: e.createdAt.toISOString() }))}
+                    />
                   )}
                 </div>
               ))}
