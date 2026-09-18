@@ -173,19 +173,55 @@ export async function resolveDisputeAction(
           where: { id: existingPayout.id },
           data: { status: "PENDING", amountAgorot: sellerPayoutAgorot, failureReason: null },
         });
+        await tx.paymentEvent.create({
+          data: {
+            orderId: order.id,
+            payoutId: existingPayout.id,
+            type: "PAYOUT_RESUMED",
+            provider: "internal",
+            amountAgorot: sellerPayoutAgorot,
+            reason: `dispute resolved (${disputeId})`,
+          },
+        });
       } else {
-        await tx.payout.create({
+        const created = await tx.payout.create({
           data: { orderId: order.id, vendorId: order.vendorId, status: "PENDING", trigger: "MANUAL", amountAgorot: sellerPayoutAgorot },
+        });
+        await tx.paymentEvent.create({
+          data: {
+            orderId: order.id,
+            payoutId: created.id,
+            type: "PAYOUT_SCHEDULED",
+            provider: "internal",
+            amountAgorot: sellerPayoutAgorot,
+            reason: `dispute resolved (${disputeId})`,
+          },
         });
       }
     } else {
       // Full refund (whether via REFUND_BUYER or a PARTIAL_REFUND that
       // happens to cover the whole order) — any payout still sitting
       // PENDING/ON_HOLD for this order must never go out.
-      await tx.payout.updateMany({
+      const cancelledPayouts = await tx.payout.findMany({
         where: { orderId: order.id, status: { in: ["PENDING", "ON_HOLD"] } },
-        data: { status: "FAILED", failureReason: `בוטל — הסכסוך הוכרע לטובת הקונה (${disputeId})` },
+        select: { id: true, amountAgorot: true },
       });
+      if (cancelledPayouts.length > 0) {
+        await tx.payout.updateMany({
+          where: { id: { in: cancelledPayouts.map((p) => p.id) } },
+          data: { status: "FAILED", failureReason: `בוטל — הסכסוך הוכרע לטובת הקונה (${disputeId})` },
+        });
+        await tx.paymentEvent.createMany({
+          data: cancelledPayouts.map((p) => ({
+            orderId: order.id,
+            payoutId: p.id,
+            type: "PAYOUT_CANCELLED" as const,
+            provider: "internal",
+            amountAgorot: p.amountAgorot,
+            reason: `dispute resolved for buyer (${disputeId})`,
+          })),
+        });
+      }
     }
   });
 
@@ -198,6 +234,16 @@ export async function resolveDisputeAction(
       idempotencyKey: `dispute_refund_${disputeId}`,
     });
     await recordFullRefund(order.id, refundAgorot, `dispute_${disputeId}`);
+    await db.paymentEvent.create({
+      data: {
+        orderId: order.id,
+        type: "REFUND_COMPLETED",
+        provider: provider.name,
+        providerReference: order.providerIntentId,
+        amountAgorot: refundAgorot,
+        reason: `dispute_${disputeId}`,
+      },
+    });
   }
 
   await auditAdmin(admin.id, "DISPUTE_RESOLVED", "Dispute", disputeId, {
@@ -286,6 +332,16 @@ export async function processPayoutAction(
     data: { status: "PROCESSING", scheduledFor: new Date() },
   });
 
+  await db.paymentEvent.create({
+    data: {
+      orderId: payout.orderId,
+      payoutId,
+      type: "PAYOUT_PROCESSING_STARTED",
+      provider: getPaymentProvider().name,
+      amountAgorot: payout.amountAgorot,
+    },
+  });
+
   await auditAdmin(admin.id, "PAYOUT_PROCESSED", "Payout", payoutId, {
     amountAgorot: payout.amountAgorot,
     vendorId: payout.vendorId,
@@ -310,12 +366,26 @@ export async function holdPayoutAction(input: z.infer<typeof holdPayoutSchema>):
   if (!parsed.success) return { error: "קלט לא תקין" };
   const { payoutId, reason } = parsed.data;
 
-  const payout = await db.payout.findUnique({ where: { id: payoutId }, select: { status: true } });
+  const payout = await db.payout.findUnique({
+    where: { id: payoutId },
+    select: { status: true, orderId: true, amountAgorot: true },
+  });
   if (!payout) return { error: "התשלום לא נמצא." };
 
   await db.payout.update({
     where: { id: payoutId },
     data: { status: "ON_HOLD", failureReason: reason },
+  });
+
+  await db.paymentEvent.create({
+    data: {
+      orderId: payout.orderId,
+      payoutId,
+      type: "PAYOUT_HELD",
+      provider: "internal",
+      amountAgorot: payout.amountAgorot,
+      reason,
+    },
   });
 
   await auditAdmin(admin.id, "PAYOUT_HELD", "Payout", payoutId, { reason, previousStatus: payout.status });

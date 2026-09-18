@@ -55,9 +55,9 @@ export async function GET(req: Request) {
       continue;
     }
 
-    await db.$transaction([
-      db.order.update({ where: { id: order.id }, data: { status: "CONFIRMED" } }),
-      db.payout.create({
+    await db.$transaction(async (tx) => {
+      await tx.order.update({ where: { id: order.id }, data: { status: "CONFIRMED" } });
+      const payout = await tx.payout.create({
         data: {
           orderId: order.id,
           vendorId: order.vendorId,
@@ -66,8 +66,19 @@ export async function GET(req: Request) {
           trigger: "AUTO",
           scheduledFor: new Date(),
         },
-      }),
-    ]);
+      });
+      // "internal" — this is our own delay-based scheduling decision, not
+      // a call to any payment provider.
+      await tx.paymentEvent.create({
+        data: {
+          orderId: order.id,
+          payoutId: payout.id,
+          type: "PAYOUT_SCHEDULED",
+          provider: "internal",
+          amountAgorot: ledgerEntry.amountAgorot,
+        },
+      });
+    });
     scheduled++;
   }
 

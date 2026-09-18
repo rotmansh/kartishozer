@@ -91,6 +91,21 @@ export async function createOrderAction(listingId: string): Promise<CreateOrderR
       data: { orderId: created.id, buyerId: user.id, sellerId: listing.vendor.userId },
     });
 
+    // The mock provider confirms synchronously in one step (no separate
+    // authorization held before a later capture), so only this one event
+    // fires today — PAYMENT_INITIATED/PAYMENT_AUTHORIZED exist in the enum
+    // for when a real, asynchronous processor is wired in.
+    await tx.paymentEvent.create({
+      data: {
+        orderId: created.id,
+        type: "PAYMENT_CAPTURED",
+        provider: provider.name,
+        providerReference: intent.providerIntentId,
+        amountAgorot: totals.totalAgorot,
+        status: confirmed.status,
+      },
+    });
+
     return created;
   });
 

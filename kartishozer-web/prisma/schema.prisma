@@ -319,11 +319,57 @@ model Order {
   disputes      Dispute[]
   payouts       Payout[]
   ledgerEntries LedgerEntry[]
+  paymentEvents PaymentEvent[]
   conversation  Conversation?
 
   @@index([status])
   @@index([buyerId])
   @@index([vendorId])
+}
+
+// Append-only log of every payment/payout lifecycle moment — Order.status
+// and Payout.status only ever hold the CURRENT state, so a full history
+// (when was it captured, held, released, refunded — not just "it's
+// REFUNDED now") didn't exist anywhere before this. "internal" as
+// `provider` marks a transition that's our own decision (a dispute
+// freezing a payout, an admin holding one) rather than an actual payment-
+// gateway call — everything else carries the real provider's name so a
+// future non-mock processor slots in without a schema change.
+enum PaymentEventType {
+  PAYMENT_INITIATED
+  PAYMENT_AUTHORIZED
+  PAYMENT_CAPTURED
+  PAYMENT_FAILED
+  PAYOUT_SCHEDULED
+  PAYOUT_HELD
+  PAYOUT_RESUMED
+  PAYOUT_PROCESSING_STARTED
+  PAYOUT_CANCELLED
+  REFUND_INITIATED
+  REFUND_COMPLETED
+  CHARGEBACK_OPENED
+  CHARGEBACK_RESOLVED
+}
+
+model PaymentEvent {
+  id                String           @id @default(cuid())
+  orderId           String
+  order             Order            @relation(fields: [orderId], references: [id])
+  payoutId          String?
+  payout            Payout?          @relation(fields: [payoutId], references: [id])
+  type              PaymentEventType
+  provider          String
+  providerReference String?
+  amountAgorot      Int
+  currency          String           @default("ILS")
+  status            String?
+  reason            String?
+  createdAt         DateTime         @default(now())
+
+  @@index([orderId])
+  @@index([payoutId])
+  @@index([type])
+  @@index([createdAt])
 }
 
 // One conversation per order — this is delivery-coordination for that
@@ -430,6 +476,8 @@ model Payout {
   processedAt   DateTime?
   failureReason String?
   createdAt     DateTime      @default(now())
+
+  paymentEvents PaymentEvent[]
 
   @@index([status])
 }

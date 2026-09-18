@@ -49,7 +49,7 @@ export async function openDisputeAction(
     include: {
       event: { select: { nameHe: true } },
       vendor: { include: { user: true } },
-      payouts: { where: { status: "PENDING" }, select: { id: true } },
+      payouts: { where: { status: "PENDING" }, select: { id: true, amountAgorot: true } },
       disputes: { where: { status: { in: ["OPEN", "UNDER_REVIEW"] } }, select: { id: true } },
     },
   });
@@ -79,6 +79,16 @@ export async function openDisputeAction(
       await tx.payout.updateMany({
         where: { id: { in: order.payouts.map((p) => p.id) } },
         data: { status: "ON_HOLD", failureReason: `הוקפא אוטומטית — מחלוקת פתוחה (${created.id})` },
+      });
+      await tx.paymentEvent.createMany({
+        data: order.payouts.map((p) => ({
+          orderId: order.id,
+          payoutId: p.id,
+          type: "PAYOUT_HELD" as const,
+          provider: "internal",
+          amountAgorot: p.amountAgorot,
+          reason: `dispute opened (${created.id})`,
+        })),
       });
     }
 
