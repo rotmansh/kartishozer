@@ -65,3 +65,15 @@ export async function sendPushForDisputeUpdate(params: {
 }): Promise<void> {
   await deliverPush(params.recipientUserId, { title: params.title, body: params.body, url: "/profile" });
 }
+
+export async function sendPushForListingAvailable(params: {
+  recipientUserId: string;
+  eventNameHe: string;
+  eventId: string;
+}): Promise<void> {
+  await deliverPush(params.recipientUserId, {
+    title: "כרטיס חדש זמין",
+    body: `התפרסם כרטיס ל${params.eventNameHe} שחיכיתם לו`,
+    url: `/event/${params.eventId}`,
+  });
+}

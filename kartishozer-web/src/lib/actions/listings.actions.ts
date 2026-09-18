@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getAppUser } from "@/lib/auth/server";
 import { writeAuditLog } from "@/lib/audit";
 import { RISK_ENGINE_VERSION } from "@/lib/riskEngineVersion";
+import { notifyEventWaitlistIfFirstActiveListing } from "@/lib/waitlist";
 import type { ListingStatus, RiskLevel, RiskAssessmentTrigger } from "@prisma/client";
 
 const createListingSchema = z.object({
@@ -319,6 +320,10 @@ export async function createListingAction(
   });
 
   await recordRiskAssessmentEvent(listing.id, vendor.id, "LISTING_CREATED", risk);
+
+  if (risk.status === "ACTIVE") {
+    await notifyEventWaitlistIfFirstActiveListing(data.eventId, event.nameHe);
+  }
 
   revalidatePath("/profile");
   revalidatePath(`/event/${data.eventId}`);

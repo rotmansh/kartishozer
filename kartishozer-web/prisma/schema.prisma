@@ -38,6 +38,7 @@ model User {
   eventFavorites        EventFavorite[]
   pushSubscriptions     PushSubscription[]
   disputeEvidenceUploads DisputeEvidence[]
+  eventWaitlistEntries  EventWaitlist[]
 }
 
 enum VerificationLevel {
@@ -121,6 +122,7 @@ model Event {
   listings Listing[]
   orders   Order[]
   favoritedBy EventFavorite[]
+  waitlistEntries EventWaitlist[]
 
   @@unique([nameHe, venueId, startsAt])
   @@index([category])
@@ -139,6 +141,25 @@ model EventFavorite {
   createdAt DateTime @default(now())
 
   @@unique([userId, eventId])
+}
+
+// A buyer's "notify me" request, joined only while an event has zero
+// ACTIVE listings (enforced in the action, not here — this table has no
+// opinion on the event's current listing count). One-shot: the first
+// listing to bring the event from 0 to 1+ active listings notifies every
+// row here (see notifyEventWaitlist in listings.actions.ts) and the rows
+// are deleted, the same way a raffle ticket is spent rather than
+// re-triggering on every later listing for the same event.
+model EventWaitlist {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, eventId])
+  @@index([eventId])
 }
 
 // ── Listings & risk ───────────────────────────────────────────

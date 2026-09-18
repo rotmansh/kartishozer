@@ -16,6 +16,7 @@ import { recordFullRefund } from "@/lib/ledger";
 import { sendDisputeUpdateEmail } from "@/lib/notifications/email";
 import { sendPushForDisputeUpdate } from "@/lib/notifications/push";
 import { writeAuditLog as auditAdmin } from "@/lib/audit";
+import { notifyEventWaitlistIfFirstActiveListing } from "@/lib/waitlist";
 
 type ActionResult<T = { success: true }> = T | { error: string };
 
@@ -43,7 +44,7 @@ export async function reviewListingAction(
 
   const listing = await db.listing.findUnique({
     where: { id: listingId },
-    select: { id: true, status: true, vendorId: true },
+    select: { id: true, status: true, vendorId: true, eventId: true, event: { select: { nameHe: true } } },
   });
   if (!listing) return { error: "המודעה לא נמצאה." };
 
@@ -57,6 +58,10 @@ export async function reviewListingAction(
       data: { decision, reviewedById: admin.id, reviewedAt: new Date(), reviewNotes: notes },
     }),
   ]);
+
+  if (newStatus === "ACTIVE") {
+    await notifyEventWaitlistIfFirstActiveListing(listing.eventId, listing.event.nameHe);
+  }
 
   await auditAdmin(admin.id, `LISTING_${decision}`, "Listing", listingId, {
     previousStatus: listing.status,
