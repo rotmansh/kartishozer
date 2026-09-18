@@ -166,6 +166,7 @@ export type PlatformConfigKey =
   | "buyer_fee_percent"
   | "seller_fee_percent"
   | "payout_delay_days"
+  | "dispute_window_days"
   | "max_listings_per_vendor_per_day"
   | "risk_auto_approve_threshold"
   | "risk_manual_review_threshold"

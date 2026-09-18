@@ -376,6 +376,12 @@ const CONFIG_META: Record<string, Omit<PlatformConfigEntry, "key" | "value" | "u
     description: "כמה ימים לאחר האירוע ישתחרר הכסף למוכר. ברירת מחדל: 3",
     type: "number",
   },
+  dispute_window_days: {
+    label: "חלון זמן לפתיחת מחלוקת (ימים אחרי האירוע)",
+    description:
+      "כמה ימים אחרי מועד האירוע קונה עדיין יכול לפתוח פנייה על הזמנה. ברירת מחדל: 14",
+    type: "number",
+  },
   max_listings_per_vendor_per_day: {
     label: "מקסימום מודעות למוכר ביום",
     description: "מגביל מוכרים מסחריים. ברירת מחדל: 20",
@@ -449,6 +455,7 @@ function getDefaultValue(key: string): string {
     buyer_fee_percent: "10",
     seller_fee_percent: "7",
     payout_delay_days: "3",
+    dispute_window_days: "14",
     max_listings_per_vendor_per_day: "20",
     risk_auto_approve_threshold: "20",
     risk_manual_review_threshold: "60",

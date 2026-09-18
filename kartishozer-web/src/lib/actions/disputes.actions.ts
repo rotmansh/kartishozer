@@ -89,7 +89,7 @@ export async function openDisputeAction(
   const order = await db.order.findUnique({
     where: { id: orderId },
     include: {
-      event: { select: { nameHe: true } },
+      event: { select: { nameHe: true, startsAt: true } },
       vendor: { include: { user: true } },
       payouts: { where: { status: "PENDING" }, select: { id: true, amountAgorot: true } },
       disputes: { where: { status: { in: ["OPEN", "UNDER_REVIEW"] } }, select: { id: true } },
@@ -102,6 +102,19 @@ export async function openDisputeAction(
   }
   if (order.disputes.length > 0) {
     return { error: "כבר פתוחה פנייה על ההזמנה הזו — צוות התמיכה כבר מטפל בה" };
+  }
+
+  // Configurable via /admin/config (dispute_window_days) — measured from
+  // the event date, not the purchase date, since "the ticket didn't
+  // work" is only discoverable at or after the event itself. A ticket
+  // bought weeks ahead of the show shouldn't have its window quietly
+  // expire before the event even happens.
+  const windowConfig = await db.platformConfig.findUnique({ where: { key: "dispute_window_days" } });
+  const windowDays = Number(windowConfig?.value ?? 14);
+  const disputeDeadline = new Date(order.event.startsAt);
+  disputeDeadline.setDate(disputeDeadline.getDate() + windowDays);
+  if (new Date() > disputeDeadline) {
+    return { error: `לא ניתן לפתוח פנייה יותר מ-${windowDays} ימים לאחר מועד האירוע` };
   }
 
   const dispute = await db.$transaction(async (tx) => {
