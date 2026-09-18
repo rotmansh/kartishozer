@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { PreviewBanner } from "./PreviewBanner";
 import { BottomNav } from "./BottomNav";
+import { WelcomeOnboarding } from "@/components/WelcomeOnboarding";
 
 // "/messages/" (with the trailing slash) matches a specific thread, not
 // the "/messages" list — the thread view needs the full screen height for
@@ -22,6 +23,7 @@ export function AppShell({ children, unreadCount = 0 }: { children: ReactNode; u
 
   return (
     <div className="app-shell shadow-[0_0_60px_rgba(0,0,0,0.06)]">
+      <WelcomeOnboarding />
       <PreviewBanner />
       <div className={hideNav ? "" : "pb-24"}>{children}</div>
       {!hideNav && <BottomNav unreadCount={unreadCount} />}
