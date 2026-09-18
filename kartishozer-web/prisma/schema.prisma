@@ -201,9 +201,11 @@ model Listing {
 // /api/tickets/[listingId], the only thing that ever reads storageUrl).
 // sha256 is the exact-file duplicate check — the same bytes uploaded again
 // under a different listing (even a different vendor) is strong fraud
-// evidence on its own. Barcode/QR-based duplicate detection (catching a
-// re-encoded or re-photographed copy of the same underlying ticket, not
-// just the same file) is a deliberate follow-up, not implemented here.
+// evidence on its own. qrContentHash is the follow-up signal: a photo or
+// re-encoded copy of the same physical ticket has different bytes (so
+// sha256 alone misses it) but usually the same embedded QR content — see
+// uploadTicketFileAction. Null when the upload is a PDF (not decoded —
+// would need rendering to an image first) or the image has no QR code.
 model TicketFile {
   id            String   @id @default(cuid())
   listingId     String   @unique
@@ -212,9 +214,11 @@ model TicketFile {
   mimeType      String
   fileSizeBytes Int
   sha256        String
+  qrContentHash String?
   uploadedAt    DateTime @default(now())
 
   @@index([sha256])
+  @@index([qrContentHash])
 }
 
 model ListingRisk {
@@ -253,6 +257,11 @@ enum RiskAssessmentTrigger {
   LISTING_CREATED
   PRICE_OR_QUANTITY_EDITED
   DUPLICATE_FILE_DETECTED
+  // A different image (different sha256) whose embedded QR code content
+  // matches another listing's ticket file — catches a re-photographed or
+  // re-encoded copy of the same physical ticket, which DUPLICATE_FILE_DETECTED
+  // (exact bytes only) misses entirely.
+  DUPLICATE_QR_DETECTED
 }
 
 model RiskAssessmentEvent {
