@@ -44,20 +44,35 @@ export default function SearchPage() {
     isWhenFilter(searchParams.get("when")) ? (searchParams.get("when") as WhenFilter) : null
   );
   const [sort, setSort] = useState<SearchSortKey>("date");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [canFavorite, setCanFavorite] = useState(false);
   const [isPending, startTransition] = useTransition();
 
+  // Shekel inputs, converted to agorot at the boundary — everywhere else
+  // (server actions, DB) money is always agorot.
+  const minPriceAgorot = minPrice.trim() ? Math.round(Number(minPrice) * 100) : null;
+  const maxPriceAgorot = maxPrice.trim() ? Math.round(Number(maxPrice) * 100) : null;
+  const hasPriceFilter = minPriceAgorot != null || maxPriceAgorot != null;
+
   useEffect(() => {
     const handle = setTimeout(() => {
       startTransition(async () => {
-        const { items, canFavorite } = await searchCatalogAction({ query, category, sort, when });
+        const { items, canFavorite } = await searchCatalogAction({
+          query,
+          category,
+          sort,
+          when,
+          minPriceAgorot,
+          maxPriceAgorot,
+        });
         setResults(items);
         setCanFavorite(canFavorite);
       });
     }, 150);
     return () => clearTimeout(handle);
-  }, [query, category, sort, when]);
+  }, [query, category, sort, when, minPriceAgorot, maxPriceAgorot]);
 
   return (
     <div>
@@ -121,6 +136,46 @@ export default function SearchPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="flex items-center gap-2 mt-2.5">
+          <label htmlFor="search-min-price" className="text-[11px] font-bold text-ink-400 flex-shrink-0">
+            טווח מחיר (₪)
+          </label>
+          <input
+            id="search-min-price"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            placeholder="מ-"
+            value={minPrice}
+            onChange={(e) => setMinPrice(e.target.value)}
+            className="w-16 rounded-full bg-white border border-ink-900/10 px-3 py-1.5 text-[11px] text-center outline-none"
+          />
+          <span className="text-ink-300 text-xs">–</span>
+          <input
+            id="search-max-price"
+            aria-label="מחיר מקסימלי"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            placeholder="עד"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+            className="w-16 rounded-full bg-white border border-ink-900/10 px-3 py-1.5 text-[11px] text-center outline-none"
+          />
+          {hasPriceFilter && (
+            <button
+              onClick={() => {
+                setMinPrice("");
+                setMaxPrice("");
+              }}
+              aria-label="נקה טווח מחיר"
+              className="tap text-ink-300 flex-shrink-0"
+            >
+              <X size={15} />
+            </button>
+          )}
         </div>
       </div>
 

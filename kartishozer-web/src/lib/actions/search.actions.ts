@@ -46,15 +46,36 @@ export async function searchCatalogAction(input: {
   category: CategorySlug | null;
   sort: SearchSortKey;
   when?: WhenFilter | null;
+  minPriceAgorot?: number | null;
+  maxPriceAgorot?: number | null;
 }): Promise<SearchCatalogResult> {
   const q = input.query.trim();
   const whenBounds = input.when ? whenRange(input.when) : null;
+
+  // A price bound only makes sense checked against the listings that are
+  // actually buyable right now — same ACTIVE/not-deleted condition as
+  // hasActiveListing, just with the price range folded into the same
+  // "some" clause instead of ANDing two separate listing conditions
+  // together (which would require two *different* listings to each match
+  // one half, not one listing matching both).
+  const hasMatchingListing = {
+    listings: {
+      some: {
+        status: "ACTIVE" as const,
+        deletedAt: null,
+        priceAgorot: {
+          ...(input.minPriceAgorot != null ? { gte: input.minPriceAgorot } : {}),
+          ...(input.maxPriceAgorot != null ? { lte: input.maxPriceAgorot } : {}),
+        },
+      },
+    },
+  };
 
   const [events, user] = await Promise.all([
     db.event.findMany({
       where: {
         startsAt: whenBounds ?? { gte: new Date() },
-        ...hasActiveListing,
+        ...(input.minPriceAgorot != null || input.maxPriceAgorot != null ? hasMatchingListing : hasActiveListing),
         ...(input.category ? { category: input.category } : {}),
         ...(q
           ? {
