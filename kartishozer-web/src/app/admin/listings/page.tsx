@@ -33,12 +33,17 @@ export default async function AdminListingsPage({ searchParams }: Props) {
 
   const { items, total } = await getAdminListings({ status, riskLevel, page });
 
-  const RISK_FLAGS: { key: keyof NonNullable<(typeof items)[0]["riskAssessment"]>; label: string }[] = [
+  const RISK_FLAGS: { key: keyof NonNullable<(typeof items)[0]["riskAssessment"]>; label: string; tone?: "positive" }[] = [
     { key: "duplicateBarcode", label: "ברקוד כפול" },
     { key: "duplicatePdfHash", label: "PDF כפול" },
     { key: "suspiciousFaceValue", label: "מחיר פנים חשוד" },
     { key: "highRiskAccount", label: "חשבון בסיכון" },
     { key: "bulkListingFlag", label: "מכירה מרוכזת" },
+    { key: "repeatEventFlag", label: "מודעות חוזרות לאירוע" },
+    { key: "highQuantityFlag", label: "כמות גבוהה" },
+    { key: "highValueTicketFlag", label: "כרטיס יקר" },
+    { key: "pastDisputeFlag", label: "היסטוריית מחלוקות" },
+    { key: "trustedSellerCredit", label: "מוכר ותיק ואמין", tone: "positive" },
   ];
 
   return (
@@ -147,7 +152,9 @@ export default async function AdminListingsPage({ searchParams }: Props) {
                         {flags.map((f) => (
                           <span
                             key={f.key as string}
-                            className="rounded px-1.5 py-0.5 text-[10px] font-bold bg-[#E8503A]/20 text-[#E8503A]"
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                              f.tone === "positive" ? "bg-[#00B4A6]/20 text-[#00B4A6]" : "bg-[#E8503A]/20 text-[#E8503A]"
+                            }`}
                           >
                             {f.label}
                           </span>

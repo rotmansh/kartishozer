@@ -54,6 +54,11 @@ export type AdminListing = {
     suspiciousFaceValue: boolean;
     highRiskAccount: boolean;
     bulkListingFlag: boolean;
+    repeatEventFlag: boolean;
+    highQuantityFlag: boolean;
+    highValueTicketFlag: boolean;
+    pastDisputeFlag: boolean;
+    trustedSellerCredit: boolean;
     reviewedById: string | null;
     reviewNotes: string | null;
   } | null;
@@ -131,6 +136,10 @@ export type PlatformConfigKey =
   | "risk_auto_approve_threshold"
   | "risk_manual_review_threshold"
   | "risk_reject_threshold"
+  | "repeat_event_listing_threshold"
+  | "high_quantity_threshold"
+  | "high_value_ticket_threshold_agorot"
+  | "trusted_seller_min_orders"
   | "maintenance_mode"
   | "new_vendor_registration_enabled";
 

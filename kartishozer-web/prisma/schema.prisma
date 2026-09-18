@@ -188,6 +188,11 @@ model ListingRisk {
   suspiciousFaceValue Boolean   @default(false)
   highRiskAccount     Boolean   @default(false)
   bulkListingFlag     Boolean   @default(false)
+  repeatEventFlag     Boolean   @default(false)
+  highQuantityFlag    Boolean   @default(false)
+  highValueTicketFlag Boolean   @default(false)
+  pastDisputeFlag     Boolean   @default(false)
+  trustedSellerCredit Boolean   @default(false)
   reviewedById        String?
   reviewedAt          DateTime?
   reviewNotes         String?

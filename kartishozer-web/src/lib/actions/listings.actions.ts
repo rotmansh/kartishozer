@@ -44,26 +44,38 @@ async function checkMarkupAllowed(priceAgorot: number, faceValueAgorot: number):
 }
 
 /**
- * Very small, real (not fake) risk engine — mirrors the thresholds the
- * admin panel already exposes in PlatformConfig (risk_auto_approve /
- * risk_manual_review / risk_reject). No stolen-ticket detection is
- * possible without uploaded ticket files, so duplicateBarcode /
- * duplicatePdfHash stay false — everything else is computed from real
- * data (this vendor's history, this listing's price vs face value).
- * Markup itself is no longer scored here — see checkMarkupAllowed,
- * which runs before this and blocks outright instead of contributing
- * points toward a "maybe fine, maybe not" score.
+ * Real (not fake) risk engine — mirrors the thresholds the admin panel
+ * already exposes in PlatformConfig (risk_auto_approve / risk_manual_review
+ * / risk_reject). No stolen-ticket detection is possible without uploaded
+ * ticket files, so duplicateBarcode / duplicatePdfHash stay false —
+ * everything else is computed from real data: this vendor's history and
+ * dispute record, how many other listings they already have for this same
+ * event, this listing's quantity and price. Markup itself is no longer
+ * scored here — see checkMarkupAllowed, which runs before this and blocks
+ * outright instead of contributing points toward a "maybe fine" score.
  */
 async function assessListingRisk(input: {
   vendorId: string;
   isVendorVerified: boolean;
+  eventId: string;
+  quantity: number;
   priceAgorot: number;
   faceValueAgorot: number;
+  excludeListingId?: string;
 }) {
   const config = await db.platformConfig.findMany({
     where: {
       key: {
-        in: ["max_listings_per_vendor_per_day", "risk_auto_approve_threshold", "risk_manual_review_threshold", "risk_reject_threshold"],
+        in: [
+          "max_listings_per_vendor_per_day",
+          "risk_auto_approve_threshold",
+          "risk_manual_review_threshold",
+          "risk_reject_threshold",
+          "repeat_event_listing_threshold",
+          "high_quantity_threshold",
+          "high_value_ticket_threshold_agorot",
+          "trusted_seller_min_orders",
+        ],
       },
     },
   });
@@ -72,6 +84,10 @@ async function assessListingRisk(input: {
   const autoApprove = cfg.risk_auto_approve_threshold ?? 20;
   const manualReview = cfg.risk_manual_review_threshold ?? 60;
   const reject = cfg.risk_reject_threshold ?? 80;
+  const repeatEventThreshold = cfg.repeat_event_listing_threshold ?? 3;
+  const highQuantityThreshold = cfg.high_quantity_threshold ?? 4;
+  const highValueThresholdAgorot = cfg.high_value_ticket_threshold_agorot ?? 150000;
+  const trustedSellerMinOrders = cfg.trusted_seller_min_orders ?? 10;
 
   // Always false: any listing reaching this point already passed
   // checkMarkupAllowed. Kept in the schema/admin audit trail rather than
@@ -79,19 +95,46 @@ async function assessListingRisk(input: {
   // was somehow bypassed, which is worth being able to see.
   const suspiciousFaceValue = false;
 
-  const [priorApprovedCount, todayCount] = await Promise.all([
+  const [priorApprovedCount, todayCount, sameEventCount, disputeCounts, completedOrderCount] = await Promise.all([
     db.listing.count({ where: { vendorId: input.vendorId, status: { in: ["ACTIVE", "SOLD"] } } }),
     db.listing.count({
       where: { vendorId: input.vendorId, createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
     }),
+    db.listing.count({
+      where: {
+        vendorId: input.vendorId,
+        eventId: input.eventId,
+        deletedAt: null,
+        status: { in: ["ACTIVE", "PENDING_REVIEW", "SOLD"] },
+        ...(input.excludeListingId && { id: { not: input.excludeListingId } }),
+      },
+    }),
+    Promise.all([
+      db.dispute.count({ where: { order: { vendorId: input.vendorId }, status: "RESOLVED_BUYER" } }),
+      db.dispute.count({ where: { order: { vendorId: input.vendorId } } }),
+    ]),
+    db.order.count({ where: { vendorId: input.vendorId, status: { in: ["CONFIRMED", "TICKET_DELIVERED"] } } }),
   ]);
+  const [resolvedAgainstSellerCount, totalDisputeCount] = disputeCounts;
+
   const highRiskAccount = !input.isVendorVerified && priorApprovedCount === 0;
   const bulkListingFlag = todayCount >= maxPerDay;
+  const repeatEventFlag = sameEventCount >= repeatEventThreshold;
+  const highQuantityFlag = input.quantity >= highQuantityThreshold;
+  const highValueTicketFlag = input.priceAgorot >= highValueThresholdAgorot;
+  const pastDisputeFlag = resolvedAgainstSellerCount >= 1;
+  const trustedSellerCredit = completedOrderCount >= trustedSellerMinOrders && totalDisputeCount === 0;
 
   let totalScore = 0;
   if (suspiciousFaceValue) totalScore += 35;
   if (highRiskAccount) totalScore += 25;
   if (bulkListingFlag) totalScore += 30;
+  if (repeatEventFlag) totalScore += 20;
+  if (highQuantityFlag) totalScore += 15;
+  if (highValueTicketFlag) totalScore += 15;
+  if (pastDisputeFlag) totalScore += 35;
+  if (trustedSellerCredit) totalScore -= 25;
+  totalScore = Math.max(0, totalScore);
 
   let riskLevel: RiskLevel = "LOW";
   let status: ListingStatus = "ACTIVE";
@@ -119,6 +162,11 @@ async function assessListingRisk(input: {
     suspiciousFaceValue,
     highRiskAccount,
     bulkListingFlag,
+    repeatEventFlag,
+    highQuantityFlag,
+    highValueTicketFlag,
+    pastDisputeFlag,
+    trustedSellerCredit,
   };
 }
 
@@ -156,6 +204,8 @@ export async function createListingAction(
   const risk = await assessListingRisk({
     vendorId: vendor.id,
     isVendorVerified: vendor.isVerified,
+    eventId: data.eventId,
+    quantity: data.quantity,
     priceAgorot: data.priceAgorot,
     faceValueAgorot: data.faceValueAgorot,
   });
@@ -182,6 +232,11 @@ export async function createListingAction(
           suspiciousFaceValue: risk.suspiciousFaceValue,
           highRiskAccount: risk.highRiskAccount,
           bulkListingFlag: risk.bulkListingFlag,
+          repeatEventFlag: risk.repeatEventFlag,
+          highQuantityFlag: risk.highQuantityFlag,
+          highValueTicketFlag: risk.highValueTicketFlag,
+          pastDisputeFlag: risk.pastDisputeFlag,
+          trustedSellerCredit: risk.trustedSellerCredit,
         },
       },
     },
@@ -217,18 +272,22 @@ export async function updateListingAction(
   if (listing.status === "SOLD") return { error: "לא ניתן לערוך כרטיס שכבר נמכר" };
 
   const priceChanged = data.priceAgorot !== listing.priceAgorot;
+  const quantityChanged = data.quantity !== listing.quantity;
 
   if (priceChanged) {
     const markupError = await checkMarkupAllowed(data.priceAgorot, listing.faceValueAgorot);
     if (markupError) return { error: markupError };
   }
 
-  const risk = priceChanged
+  const risk = priceChanged || quantityChanged
     ? await assessListingRisk({
         vendorId: user.vendor.id,
         isVendorVerified: user.vendor.isVerified,
+        eventId: listing.eventId,
+        quantity: data.quantity,
         priceAgorot: data.priceAgorot,
         faceValueAgorot: listing.faceValueAgorot,
+        excludeListingId: listing.id,
       })
     : null;
 
@@ -257,6 +316,11 @@ export async function updateListingAction(
         suspiciousFaceValue: risk.suspiciousFaceValue,
         highRiskAccount: risk.highRiskAccount,
         bulkListingFlag: risk.bulkListingFlag,
+        repeatEventFlag: risk.repeatEventFlag,
+        highQuantityFlag: risk.highQuantityFlag,
+        highValueTicketFlag: risk.highValueTicketFlag,
+        pastDisputeFlag: risk.pastDisputeFlag,
+        trustedSellerCredit: risk.trustedSellerCredit,
       },
     });
   }
