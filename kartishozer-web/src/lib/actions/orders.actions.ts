@@ -5,11 +5,12 @@ import { db } from "@/lib/db";
 import { getAppUser } from "@/lib/auth/server";
 import { getPaymentProvider } from "@/lib/payments/provider.factory";
 import { computeOrderTotals, getPlatformFees } from "@/lib/queries/catalog";
-import { recordPaymentFunnelEvent } from "@/lib/analytics";
+import { recordPaymentFunnelEvent, recordTicketReceivedConfirmed } from "@/lib/analytics";
 import { PRICING_VERSION } from "@/lib/pricingVersion";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 type CreateOrderResult = { orderId: string } | { error: string };
+type ActionResult = { success: true } | { error: string };
 
 /**
  * Buying a listing buys the whole thing (matches the existing checkout UI,
@@ -165,4 +166,30 @@ export async function createOrderAction(listingId: string): Promise<CreateOrderR
   revalidatePath(`/event/${listing.eventId}`);
 
   return { orderId: order.id };
+}
+
+/**
+ * The buyer's own explicit "I got the ticket" signal — previously
+ * nothing in the app ever set OrderStatus.TICKET_DELIVERED at all,
+ * despite it being a real status in the schema; the buyer/seller only
+ * ever coordinated informally over the order's chat. Deliberately does
+ * NOT change payout timing — schedule-payouts still releases money on
+ * its own delay-based schedule regardless of this confirmation (see
+ * that route's own matching update to accept this status too), so an
+ * early confirmation can't be used to rush a payout ahead of the
+ * dispute window. This is a data/trust signal, not a financial trigger.
+ */
+export async function confirmTicketReceivedAction(orderId: string): Promise<ActionResult> {
+  const user = await getAppUser();
+  if (!user) return { error: "יש להתחבר" };
+
+  const order = await db.order.findUnique({ where: { id: orderId }, select: { buyerId: true, status: true } });
+  if (!order || order.buyerId !== user.id) return { error: "ההזמנה לא נמצאה" };
+  if (order.status !== "PAID") return { error: "לא ניתן לאשר קבלה בשלב זה" };
+
+  await db.order.update({ where: { id: orderId }, data: { status: "TICKET_DELIVERED" } });
+  await recordTicketReceivedConfirmed({ orderId, userId: user.id });
+
+  revalidatePath("/profile");
+  return { success: true };
 }

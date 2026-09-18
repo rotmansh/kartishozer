@@ -708,6 +708,10 @@ enum AnalyticsEventType {
   PAYMENT_STARTED
   PAYMENT_FAILED
   SELL_WIZARD_STARTED
+  // The buyer funnel's own "ticket delivered" step — previously
+  // unmeasurable (see confirmTicketReceivedAction), since nothing ever
+  // set OrderStatus.TICKET_DELIVERED before it existed.
+  TICKET_RECEIVED_CONFIRMED
 }
 
 model AnalyticsEvent {

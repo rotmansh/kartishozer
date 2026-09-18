@@ -31,7 +31,12 @@ export async function GET(req: Request) {
 
   const eligibleOrders = await db.order.findMany({
     where: {
-      status: "PAID",
+      // TICKET_DELIVERED is the buyer explicitly confirming they got the
+      // ticket (see confirmTicketReceivedAction) — still eligible on the
+      // exact same delay-based schedule as a plain PAID order, never
+      // earlier, so an early confirmation can't be used to rush payout
+      // ahead of the dispute window.
+      status: { in: ["PAID", "TICKET_DELIVERED"] },
       event: { startsAt: { lte: cutoff } },
       payouts: { none: {} },
       // Belt-and-suspenders: openDisputeAction already flips the order's

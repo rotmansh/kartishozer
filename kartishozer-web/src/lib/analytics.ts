@@ -174,3 +174,12 @@ export async function recordPaymentFunnelEvent(params: {
     metadata: params.metadata,
   });
 }
+
+export async function recordTicketReceivedConfirmed(params: { orderId: string; userId: string }): Promise<void> {
+  await logEvent({
+    type: "TICKET_RECEIVED_CONFIRMED",
+    orderId: params.orderId,
+    userId: params.userId,
+    visitorId: getVisitorId(),
+  });
+}

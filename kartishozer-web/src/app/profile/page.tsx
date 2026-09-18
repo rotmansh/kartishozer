@@ -24,6 +24,7 @@ import { MyListingRow } from "@/components/MyListingRow";
 import { SignOutButton } from "@/components/SignOutButton";
 import { OpenDisputeButton } from "@/components/OpenDisputeButton";
 import { DisputePanel } from "@/components/DisputePanel";
+import { ConfirmTicketReceivedButton } from "@/components/ConfirmTicketReceivedButton";
 
 export default async function ProfilePage() {
   const user = await getAppUser();
@@ -240,6 +241,9 @@ export default async function ProfilePage() {
                       צפייה בקובץ הכרטיס
                     </a>
                   )}
+                {o.status === "PAID" && o.disputes.length === 0 && (
+                  <ConfirmTicketReceivedButton orderId={o.id} />
+                )}
                 {["PAID", "CONFIRMED", "TICKET_DELIVERED"].includes(o.status) &&
                   (o.disputes.length > 0 ? (
                     <DisputePanel
