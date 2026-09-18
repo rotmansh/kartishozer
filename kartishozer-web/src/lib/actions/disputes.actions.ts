@@ -4,6 +4,8 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getAppUser } from "@/lib/auth/server";
+import { sendDisputeUpdateEmail } from "@/lib/notifications/email";
+import { sendPushForDisputeUpdate } from "@/lib/notifications/push";
 import type { OrderStatus } from "@prisma/client";
 
 type ActionResult<T = { success: true }> = T | { error: string };
@@ -45,6 +47,8 @@ export async function openDisputeAction(
   const order = await db.order.findUnique({
     where: { id: orderId },
     include: {
+      event: { select: { nameHe: true } },
+      vendor: { include: { user: true } },
       payouts: { where: { status: "PENDING" }, select: { id: true } },
       disputes: { where: { status: { in: ["OPEN", "UNDER_REVIEW"] } }, select: { id: true } },
     },
@@ -84,6 +88,24 @@ export async function openDisputeAction(
   revalidatePath("/profile");
   revalidatePath("/admin/disputes");
   revalidatePath("/admin/payouts");
+
+  // The seller has no reason to be watching their own order right now —
+  // this is the only way they'd find out a payment they're expecting just
+  // got frozen, short of admin manually telling them.
+  const sellerUser = order.vendor.user;
+  await Promise.all([
+    sendDisputeUpdateEmail({
+      toEmail: sellerUser.email,
+      toName: sellerUser.fullName,
+      subject: `נפתחה פנייה על ${order.event.nameHe}`,
+      headline: `הקונה פתח/ה פנייה על ההזמנה עבור <strong>${order.event.nameHe}</strong>. התשלום שלך על ההזמנה הזו מוקפא עד לבירור מול הצוות שלנו.`,
+    }),
+    sendPushForDisputeUpdate({
+      recipientUserId: sellerUser.id,
+      title: "נפתחה פנייה על הזמנה",
+      body: `${order.event.nameHe} — התשלום מוקפא עד לבירור`,
+    }),
+  ]);
 
   return { disputeId: dispute.id };
 }

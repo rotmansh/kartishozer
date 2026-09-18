@@ -12,30 +12,23 @@ if (PUSH_ENABLED) {
   webpush.setVapidDetails(`mailto:notifications@${new URL(getSiteUrl()).hostname}`, VAPID_PUBLIC_KEY!, VAPID_PRIVATE_KEY!);
 }
 
-export async function sendPushForNewMessage(params: {
-  recipientUserId: string;
-  fromName: string;
-  eventNameHe: string;
-  conversationId: string;
-  messageBody: string;
-}): Promise<void> {
+async function deliverPush(
+  recipientUserId: string,
+  payload: { title: string; body: string; url: string }
+): Promise<void> {
   if (!PUSH_ENABLED) return;
 
-  const subscriptions = await db.pushSubscription.findMany({ where: { userId: params.recipientUserId } });
+  const subscriptions = await db.pushSubscription.findMany({ where: { userId: recipientUserId } });
   if (subscriptions.length === 0) return;
 
-  const payload = JSON.stringify({
-    title: `${params.fromName} • ${params.eventNameHe}`,
-    body: params.messageBody,
-    url: `/messages/${params.conversationId}`,
-  });
+  const serialized = JSON.stringify(payload);
 
   await Promise.all(
     subscriptions.map(async (sub) => {
       try {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          payload
+          serialized
         );
       } catch (err) {
         // 404/410 means the browser dropped this subscription (uninstalled,
@@ -49,4 +42,26 @@ export async function sendPushForNewMessage(params: {
       }
     })
   );
+}
+
+export async function sendPushForNewMessage(params: {
+  recipientUserId: string;
+  fromName: string;
+  eventNameHe: string;
+  conversationId: string;
+  messageBody: string;
+}): Promise<void> {
+  await deliverPush(params.recipientUserId, {
+    title: `${params.fromName} • ${params.eventNameHe}`,
+    body: params.messageBody,
+    url: `/messages/${params.conversationId}`,
+  });
+}
+
+export async function sendPushForDisputeUpdate(params: {
+  recipientUserId: string;
+  title: string;
+  body: string;
+}): Promise<void> {
+  await deliverPush(params.recipientUserId, { title: params.title, body: params.body, url: "/profile" });
 }

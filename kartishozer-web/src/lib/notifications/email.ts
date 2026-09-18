@@ -49,3 +49,38 @@ export async function sendNewMessageEmail(params: {
     console.error("Failed to send new-message email:", err);
   }
 }
+
+// Fixed, non-interpolated copy per case — never embeds a buyer's free-text
+// dispute reason, since that's user input and this HTML isn't escaped.
+// Anyone who wants the details opens the order in the app, where React
+// renders it safely.
+export async function sendDisputeUpdateEmail(params: {
+  toEmail: string;
+  toName: string;
+  subject: string;
+  headline: string;
+}): Promise<void> {
+  if (!resend) return;
+
+  const url = `${getSiteUrl()}/profile`;
+
+  try {
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: params.toEmail,
+      subject: params.subject,
+      html: `
+        <div dir="rtl" style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+          <p style="font-size: 15px; color: #1a1a1a;">היי ${params.toName},</p>
+          <p style="font-size: 15px; color: #1a1a1a;">${params.headline}</p>
+          <a href="${url}" style="display: inline-block; background: #E8503A; color: white; text-decoration: none; padding: 10px 20px; border-radius: 10px; font-weight: bold; font-size: 14px;">
+            לצפייה בהזמנה
+          </a>
+          <p style="font-size: 12px; color: #999; margin-top: 24px;">כרטיס חוזר — קונים ומוכרים כרטיסים ביד שנייה, בבטחה.</p>
+        </div>
+      `,
+    });
+  } catch (err) {
+    console.error("Failed to send dispute update email:", err);
+  }
+}

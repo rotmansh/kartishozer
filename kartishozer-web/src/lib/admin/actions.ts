@@ -14,6 +14,8 @@ import type { Prisma } from "@prisma/client";
 import { getAppUser, isAdmin } from "@/lib/auth/server";
 import { getPaymentProvider } from "@/lib/payments/provider.factory";
 import { recordFullRefund } from "@/lib/ledger";
+import { sendDisputeUpdateEmail } from "@/lib/notifications/email";
+import { sendPushForDisputeUpdate } from "@/lib/notifications/push";
 
 type ActionResult<T = { success: true }> = T | { error: string };
 
@@ -99,7 +101,11 @@ export async function resolveDisputeAction(
     where: { id: disputeId },
     include: {
       order: {
-        select: { id: true, totalAgorot: true, status: true, vendorId: true, providerIntentId: true },
+        include: {
+          event: { select: { nameHe: true } },
+          buyer: true,
+          vendor: { include: { user: true } },
+        },
       },
     },
   });
@@ -124,11 +130,21 @@ export async function resolveDisputeAction(
   // must pay that same figure, never order.totalAgorot (which is what the
   // *buyer* paid, fees included, and would overpay the seller by both
   // fees combined).
-  let sellerProceedsAgorot = 0;
-  if (resolution === "RELEASE_TO_SELLER") {
+  //
+  // A partial refund splits the loss proportionally: if X% of what the
+  // buyer paid gets refunded, the seller keeps (100-X)% of their proceeds
+  // rather than either the full amount (unfair to the buyer, who has a
+  // legitimate complaint) or nothing at all (unfair to the seller, who
+  // did sell most of what they promised).
+  let sellerPayoutAgorot = 0;
+  if (resolution === "RELEASE_TO_SELLER" || resolution === "PARTIAL_REFUND") {
     const proceeds = await db.ledgerEntry.findFirst({ where: { orderId: order.id, type: "SELLER_PROCEEDS" } });
     if (!proceeds) return { error: "לא נמצאה רשומת הכנסה למוכר עבור הזמנה זו — לא ניתן לשחרר תשלום." };
-    sellerProceedsAgorot = proceeds.amountAgorot;
+
+    sellerPayoutAgorot =
+      resolution === "RELEASE_TO_SELLER"
+        ? proceeds.amountAgorot
+        : Math.max(0, Math.round(proceeds.amountAgorot * (1 - refundAgorot / order.totalAgorot)));
   }
 
   await db.$transaction(async (tx) => {
@@ -154,27 +170,30 @@ export async function resolveDisputeAction(
       },
     });
 
-    if (resolution === "RELEASE_TO_SELLER") {
+    if (sellerPayoutAgorot > 0) {
       // A payout may already exist here: schedule-payouts creates one the
       // moment an order turns CONFIRMED, and openDisputeAction puts it
       // ON_HOLD (rather than deleting it) if the buyer disputes afterwards.
-      // Take that one off hold instead of creating a second payout for the
-      // same order — only create a fresh one if the dispute was raised
-      // before the order ever reached that point.
+      // Take that one off hold (updating its amount, in case this is a
+      // partial refund reducing what it was originally created for)
+      // instead of creating a second payout for the same order — only
+      // create a fresh one if the dispute was raised before the order
+      // ever reached that point.
       const existingPayout = await tx.payout.findFirst({ where: { orderId: order.id } });
       if (existingPayout) {
         await tx.payout.update({
           where: { id: existingPayout.id },
-          data: { status: "PENDING", failureReason: null },
+          data: { status: "PENDING", amountAgorot: sellerPayoutAgorot, failureReason: null },
         });
       } else {
         await tx.payout.create({
-          data: { orderId: order.id, vendorId: order.vendorId, status: "PENDING", trigger: "MANUAL", amountAgorot: sellerProceedsAgorot },
+          data: { orderId: order.id, vendorId: order.vendorId, status: "PENDING", trigger: "MANUAL", amountAgorot: sellerPayoutAgorot },
         });
       }
     } else {
-      // Buyer won the dispute — any payout still sitting PENDING/ON_HOLD
-      // for this order must never go out.
+      // Full refund (whether via REFUND_BUYER or a PARTIAL_REFUND that
+      // happens to cover the whole order) — any payout still sitting
+      // PENDING/ON_HOLD for this order must never go out.
       await tx.payout.updateMany({
         where: { orderId: order.id, status: { in: ["PENDING", "ON_HOLD"] } },
         data: { status: "FAILED", failureReason: `בוטל — הסכסוך הוכרע לטובת הקונה (${disputeId})` },
@@ -194,6 +213,44 @@ export async function resolveDisputeAction(
   }
 
   await auditAdmin(admin.id, "DISPUTE_RESOLVED", "Dispute", disputeId, { resolution, refundAgorot, notes });
+
+  // Neither side has a reason to keep checking /profile — tell them the
+  // outcome directly. isFullRefund also covers a PARTIAL_REFUND resolution
+  // where the admin happened to type in the full order amount.
+  const isFullRefund = resolution === "REFUND_BUYER" || refundAgorot >= order.totalAgorot;
+  const fmtIls = (agorot: number) => `₪${Math.round(agorot / 100)}`;
+  const eventName = order.event.nameHe;
+
+  const buyerMessage =
+    resolution === "RELEASE_TO_SELLER"
+      ? `הפנייה שפתחת על ${eventName} נבדקה, והוחלט לשחרר את התשלום למוכר/ת — לא בוצע החזר.`
+      : isFullRefund
+      ? `בוצע לך החזר מלא על ${eventName}.`
+      : `בוצע לך החזר חלקי על ${eventName} בסך ${fmtIls(refundAgorot)}.`;
+
+  const sellerMessage =
+    resolution === "RELEASE_TO_SELLER"
+      ? `הפנייה על ${eventName} נסגרה לטובתך — התשלום שלך (${fmtIls(sellerPayoutAgorot)}) יצא לתהליך.`
+      : isFullRefund
+      ? `הפנייה על ${eventName} נסגרה — בוצע החזר מלא לקונה, ולא יועבר תשלום אליך על ההזמנה הזו.`
+      : `הפנייה על ${eventName} נסגרה — בוצע החזר חלקי לקונה, והתשלום שלך עודכן ל-${fmtIls(sellerPayoutAgorot)}.`;
+
+  await Promise.all([
+    sendDisputeUpdateEmail({
+      toEmail: order.buyer.email,
+      toName: order.buyer.fullName,
+      subject: `עדכון על הפנייה שפתחת — ${eventName}`,
+      headline: buyerMessage,
+    }),
+    sendPushForDisputeUpdate({ recipientUserId: order.buyer.id, title: "עדכון על פנייה", body: buyerMessage }),
+    sendDisputeUpdateEmail({
+      toEmail: order.vendor.user.email,
+      toName: order.vendor.user.fullName,
+      subject: `עדכון על מחלוקת — ${eventName}`,
+      headline: sellerMessage,
+    }),
+    sendPushForDisputeUpdate({ recipientUserId: order.vendor.user.id, title: "עדכון על מחלוקת", body: sellerMessage }),
+  ]);
 
   revalidatePath("/admin/disputes");
   revalidatePath("/admin/payouts");
