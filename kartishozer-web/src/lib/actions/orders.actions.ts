@@ -193,3 +193,46 @@ export async function confirmTicketReceivedAction(orderId: string): Promise<Acti
   revalidatePath("/profile");
   return { success: true };
 }
+
+// Reviewable once the buyer has confirmed receipt (TICKET_DELIVERED) or the
+// order has since settled (CONFIRMED) — not merely PAID, since the buyer
+// hasn't said the transaction actually went fine yet, and not DISPUTED/
+// REFUNDED/CANCELLED, which already say it didn't.
+const REVIEWABLE_ORDER_STATUSES = ["TICKET_DELIVERED", "CONFIRMED"] as const;
+
+export async function submitSellerReviewAction(input: {
+  orderId: string;
+  rating: number;
+  comment?: string;
+}): Promise<ActionResult> {
+  const user = await getAppUser();
+  if (!user) return { error: "יש להתחבר" };
+
+  const rating = Math.trunc(input.rating);
+  if (rating < 1 || rating > 5) return { error: "דירוג לא תקין" };
+
+  const order = await db.order.findUnique({
+    where: { id: input.orderId },
+    select: { id: true, buyerId: true, vendorId: true, status: true },
+  });
+  if (!order || order.buyerId !== user.id) return { error: "ההזמנה לא נמצאה" };
+  if (!REVIEWABLE_ORDER_STATUSES.includes(order.status as (typeof REVIEWABLE_ORDER_STATUSES)[number])) {
+    return { error: "ניתן לדרג רק לאחר קבלת הכרטיס" };
+  }
+
+  const existing = await db.sellerReview.findUnique({ where: { orderId: order.id } });
+  if (existing) return { error: "כבר דירגתם את ההזמנה הזו" };
+
+  await db.sellerReview.create({
+    data: {
+      orderId: order.id,
+      buyerId: user.id,
+      vendorId: order.vendorId,
+      rating,
+      comment: input.comment?.trim() || null,
+    },
+  });
+
+  revalidatePath("/profile");
+  return { success: true };
+}

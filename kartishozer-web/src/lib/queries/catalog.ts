@@ -32,7 +32,13 @@ async function salesCountFor(vendorId: string): Promise<number> {
   });
 }
 
+async function ratingSummaryFor(vendorId: string): Promise<{ ratingAverage: number | null; ratingCount: number }> {
+  const agg = await db.sellerReview.aggregate({ where: { vendorId }, _avg: { rating: true }, _count: true });
+  return { ratingAverage: agg._avg.rating, ratingCount: agg._count };
+}
+
 async function toSeller(vendor: Vendor & { user: User }): Promise<Seller> {
+  const { ratingAverage, ratingCount } = await ratingSummaryFor(vendor.id);
   return {
     id: vendor.id,
     displayName: vendor.displayName,
@@ -40,6 +46,8 @@ async function toSeller(vendor: Vendor & { user: User }): Promise<Seller> {
     verificationLevel: vendor.verificationLevel,
     salesCount: await salesCountFor(vendor.id),
     memberSince: vendor.createdAt.toISOString(),
+    ratingAverage,
+    ratingCount,
   };
 }
 

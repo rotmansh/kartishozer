@@ -1,4 +1,4 @@
-import { BadgeCheck } from "lucide-react";
+import { BadgeCheck, Star } from "lucide-react";
 import type { Seller } from "@/lib/types";
 
 export function SellerBadge({ seller, size = "md" }: { seller: Seller; size?: "sm" | "md" }) {
@@ -20,6 +20,13 @@ export function SellerBadge({ seller, size = "md" }: { seller: Seller; size?: "s
             {seller.displayName}
           </p>
           {seller.isVerified && <BadgeCheck size={size === "sm" ? 13 : 15} className="text-accent-500 flex-shrink-0" />}
+          {seller.ratingAverage != null && (
+            <span className="flex items-center gap-0.5 text-[11px] font-bold text-ink-500 flex-shrink-0">
+              <Star size={size === "sm" ? 10 : 11} className="fill-amber-400 text-amber-400" />
+              {seller.ratingAverage.toFixed(1)}
+              <span className="text-ink-300 font-normal">({seller.ratingCount})</span>
+            </span>
+          )}
         </div>
         {size === "md" && (
           <p className="text-[11px] text-ink-500">

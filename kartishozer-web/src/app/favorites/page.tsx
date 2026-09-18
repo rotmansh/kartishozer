@@ -65,6 +65,8 @@ export default async function FavoritesPage() {
           verificationLevel: l.vendor.verificationLevel,
           salesCount: 0,
           memberSince: l.vendor.createdAt.toISOString(),
+          ratingAverage: null,
+          ratingCount: 0,
         },
         status: l.status === "PENDING_REVIEW" ? "PENDING_REVIEW" : l.status === "SOLD" ? "SOLD" : "ACTIVE",
         section: l.section ?? undefined,

@@ -55,6 +55,8 @@ export type Seller = {
   verificationLevel: SellerVerificationLevel;
   salesCount: number;
   memberSince: string; // ISO date
+  ratingAverage: number | null; // null when the seller has zero reviews yet
+  ratingCount: number;
 };
 
 export type ListingStatus = "ACTIVE" | "PENDING_REVIEW" | "SOLD";

@@ -25,6 +25,7 @@ import { SignOutButton } from "@/components/SignOutButton";
 import { OpenDisputeButton } from "@/components/OpenDisputeButton";
 import { DisputePanel } from "@/components/DisputePanel";
 import { ConfirmTicketReceivedButton } from "@/components/ConfirmTicketReceivedButton";
+import { SellerReviewForm } from "@/components/SellerReviewForm";
 
 export default async function ProfilePage() {
   const user = await getAppUser();
@@ -61,6 +62,7 @@ export default async function ProfilePage() {
         vendor: true,
         listing: { select: { ticketFile: { select: { id: true } } } },
         conversation: { include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } } },
+        sellerReview: { select: { id: true } },
         disputes: {
           where: { status: { in: ["OPEN", "UNDER_REVIEW"] } },
           select: {
@@ -255,6 +257,9 @@ export default async function ProfilePage() {
                   ) : (
                     <OpenDisputeButton orderId={o.id} />
                   ))}
+                {["TICKET_DELIVERED", "CONFIRMED"].includes(o.status) &&
+                  o.disputes.length === 0 &&
+                  !o.sellerReview && <SellerReviewForm orderId={o.id} />}
               </div>
             ))}
           </div>
