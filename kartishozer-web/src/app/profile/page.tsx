@@ -12,6 +12,7 @@ import {
   Heart,
   FileDown,
   Bell,
+  Landmark,
 } from "lucide-react";
 import { getAppUser, isAdmin } from "@/lib/auth/server";
 import { db } from "@/lib/db";
@@ -108,6 +109,7 @@ export default async function ProfilePage() {
   const menuItems = [
     ...(userIsAdmin ? [{ icon: LayoutDashboard, label: "לוח ניהול", href: "/admin" }] : []),
     { icon: Heart, label: "מועדפים", href: "/favorites" },
+    ...(user.vendor ? [{ icon: Landmark, label: "פרטי תשלום למוכר", href: "/profile/payout-details" }] : []),
     { icon: Bell, label: "העדפות התראות", href: "/profile/notifications" },
     { icon: ShieldQuestion, label: "אימות ואבטחה", href: "/user-profile" },
     { icon: HelpCircle, label: "עזרה ותמיכה", href: "/help" },
