@@ -534,9 +534,14 @@ export async function setAdminRoleByEmailAction(
     return { error: "אי אפשר להסיר הרשאת מנהל/ת מעצמך." };
   }
 
-  const targetUser = await db.user.findUnique({
-    where: { email },
-    select: { id: true, clerkId: true, fullName: true },
+  // Case-insensitive: email addresses are effectively case-insensitive in
+  // real-world use (Gmail, most providers), but a plain `where: { email }`
+  // is an exact, case-sensitive match — an admin typing the same address
+  // with different capitalization than however it happened to be stored
+  // would otherwise get a false "not registered" here.
+  const targetUser = await db.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+    select: { id: true, clerkId: true, fullName: true, email: true },
   });
   if (!targetUser) {
     return { error: "לא נמצא/ה משתמש/ת רשומ/ה עם האימייל הזה — קודם צריך/ה להיכנס/להירשם לאתר פעם אחת." };
@@ -548,7 +553,7 @@ export async function setAdminRoleByEmailAction(
   });
 
   await auditAdmin(admin.id, makeAdmin ? "ADMIN_GRANTED" : "ADMIN_REVOKED", "User", targetUser.id, {
-    email,
+    email: targetUser.email,
     fullName: targetUser.fullName,
   });
 
