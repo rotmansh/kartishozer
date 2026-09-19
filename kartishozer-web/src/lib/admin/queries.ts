@@ -4,6 +4,7 @@
 // ============================================================
 
 import { db } from "@/lib/db";
+import { clerkClient } from "@clerk/nextjs/server";
 import { getActiveIdentityCount } from "@/lib/analytics";
 import type { Prisma } from "@prisma/client";
 import type {
@@ -12,6 +13,7 @@ import type {
   AdminDispute,
   AdminPayout,
   AdminVendor,
+  AdminRoleUser,
   PlatformConfigEntry,
   MarketplaceAnalytics,
 } from "./types";
@@ -350,6 +352,26 @@ export async function getAdminVendors(options: {
   );
 
   return { items, total };
+}
+
+// ── System admins ─────────────────────────────────────────────
+// The ADMIN role itself lives entirely in Clerk's publicMetadata (see
+// isAdmin() in auth/server.ts) — there's no local table of admins to
+// query, so listing the current ones means listing every Clerk user and
+// filtering. Fine at this app's scale (a handful of staff); if the user
+// base grows into the thousands this should switch to a local mirror
+// column instead of pulling every Clerk user on each page view.
+export async function getAdminUsersWithRole(): Promise<AdminRoleUser[]> {
+  const client = await clerkClient();
+  const { data } = await client.users.getUserList({ limit: 500 });
+
+  return data
+    .filter((u) => (u.publicMetadata as { role?: string }).role === "ADMIN")
+    .map((u) => ({
+      clerkId: u.id,
+      email: u.primaryEmailAddress?.emailAddress ?? u.emailAddresses[0]?.emailAddress ?? "—",
+      fullName: [u.firstName, u.lastName].filter(Boolean).join(" ") || "—",
+    }));
 }
 
 // ── Platform config ───────────────────────────────────────────

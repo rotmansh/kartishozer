@@ -161,6 +161,12 @@ export type AdminVendor = {
   userId: string;
 };
 
+export type AdminRoleUser = {
+  clerkId: string;
+  email: string;
+  fullName: string;
+};
+
 export type PlatformConfigKey =
   | "max_markup_percent"
   | "buyer_fee_percent"

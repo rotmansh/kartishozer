@@ -9,6 +9,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { getAppUser, isAdmin } from "@/lib/auth/server";
 import { getPaymentProvider } from "@/lib/payments/provider.factory";
@@ -20,7 +21,7 @@ import { notifyEventWaitlistIfFirstActiveListing } from "@/lib/waitlist";
 
 type ActionResult<T = { success: true }> = T | { error: string };
 
-async function requireAdminActor(): Promise<{ id: string }> {
+async function requireAdminActor(): Promise<{ id: string; email: string }> {
   const user = await getAppUser();
   if (!user || !(await isAdmin())) throw new Error("אין הרשאה.");
   return user;
@@ -504,5 +505,53 @@ export async function updatePlatformConfigAction(
   });
 
   revalidatePath("/admin/config");
+  return { success: true };
+}
+
+// ── Grant / revoke the ADMIN role by email ────────────────────
+// The role itself lives in Clerk's publicMetadata (see isAdmin() in
+// auth/server.ts), not in our own database — this just calls Clerk's
+// backend API to set it, on a user who has already signed up at least
+// once (so a real clerkId exists for them to update).
+
+const setAdminRoleSchema = z.object({
+  email: z.string().email(),
+  makeAdmin: z.boolean(),
+});
+
+export async function setAdminRoleByEmailAction(
+  input: z.infer<typeof setAdminRoleSchema>
+): Promise<ActionResult> {
+  const admin = await requireAdminActor();
+  const parsed = setAdminRoleSchema.safeParse(input);
+  if (!parsed.success) return { error: "כתובת אימייל לא תקינה." };
+  const { email, makeAdmin } = parsed.data;
+
+  // Revoking your own admin access here would lock you out of the one
+  // screen that could undo it — Clerk's own dashboard is still a way
+  // back, but there's no reason to make that the only way back.
+  if (!makeAdmin && email.toLowerCase() === admin.email.toLowerCase()) {
+    return { error: "אי אפשר להסיר הרשאת מנהל/ת מעצמך." };
+  }
+
+  const targetUser = await db.user.findUnique({
+    where: { email },
+    select: { id: true, clerkId: true, fullName: true },
+  });
+  if (!targetUser) {
+    return { error: "לא נמצא/ה משתמש/ת רשומ/ה עם האימייל הזה — קודם צריך/ה להיכנס/להירשם לאתר פעם אחת." };
+  }
+
+  const client = await clerkClient();
+  await client.users.updateUserMetadata(targetUser.clerkId, {
+    publicMetadata: { role: makeAdmin ? "ADMIN" : null },
+  });
+
+  await auditAdmin(admin.id, makeAdmin ? "ADMIN_GRANTED" : "ADMIN_REVOKED", "User", targetUser.id, {
+    email,
+    fullName: targetUser.fullName,
+  });
+
+  revalidatePath("/admin/admins");
   return { success: true };
 }

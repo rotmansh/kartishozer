@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   Wallet,
   Users,
+  UserCog,
   Settings,
   ScrollText,
   BarChart3,
@@ -33,6 +34,7 @@ const NAV: { href: string; icon: LucideIcon; label: string; exact?: boolean }[] 
   { href: "/admin/disputes", icon: AlertTriangle, label: "סכסוכים" },
   { href: "/admin/payouts", icon: Wallet, label: "תשלומים" },
   { href: "/admin/users", icon: Users, label: "משתמשים" },
+  { href: "/admin/admins", icon: UserCog, label: "מנהלי מערכת" },
   { href: "/admin/config", icon: Settings, label: "הגדרות" },
   { href: "/admin/audit", icon: ScrollText, label: "יומן פעולות" },
 ];

@@ -14,6 +14,7 @@ import {
   holdPayoutAction,
   updateVendorStatusAction,
   updatePlatformConfigAction,
+  setAdminRoleByEmailAction,
 } from "@/lib/admin/actions";
 import type { PlatformConfigEntry } from "@/lib/admin/types";
 
@@ -342,6 +343,91 @@ export function ConfigEditor({ entry }: { entry: PlatformConfigEntry }) {
 
       {saved && <span className="text-[11px] text-[#00B4A6] font-bold">✓</span>}
       {error && <span className="text-[11px] text-[#E8503A]">{error}</span>}
+    </div>
+  );
+}
+
+// ── Grant admin by email ───────────────────────────────────────
+
+export function GrantAdminForm() {
+  const [email, setEmail] = useState("");
+  const [isPending, start] = useTransition();
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        setMessage(null);
+        start(async () => {
+          const r = await setAdminRoleByEmailAction({ email, makeAdmin: true });
+          if ("error" in r) setMessage({ type: "error", text: r.error });
+          else {
+            setMessage({ type: "success", text: `${email} נוסף/ה כמנהל/ת מערכת` });
+            setEmail("");
+          }
+        });
+      }}
+      className="space-y-2"
+    >
+      <label htmlFor="grant-admin-email" className="block text-xs font-bold text-white/60">
+        הוספת מנהל/ת מערכת לפי אימייל
+      </label>
+      <div className="flex gap-2">
+        <input
+          id="grant-admin-email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="name@example.com"
+          dir="ltr"
+          className="flex-1 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-xs text-white/80 placeholder-white/20 focus:outline-none focus:border-white/30"
+        />
+        <button
+          type="submit"
+          disabled={isPending || !email}
+          className="rounded-lg px-4 py-2 text-xs font-bold bg-[#E8503A] text-white hover:bg-[#c9432f] disabled:opacity-40 shadow-sm whitespace-nowrap"
+        >
+          {isPending ? "מוסיף/ה…" : "הפוך/הפכי למנהל/ת"}
+        </button>
+      </div>
+      <p className="text-[11px] text-white/40">
+        המשתמש/ת חייב/ת כבר להיות רשומ/ה באתר (להיכנס פעם אחת) לפני שאפשר להפוך אותם למנהלים.
+      </p>
+      {message && (
+        <p className={`text-[11px] font-bold ${message.type === "success" ? "text-[#00B4A6]" : "text-[#E8503A]"}`}>
+          {message.text}
+        </p>
+      )}
+    </form>
+  );
+}
+
+export function RevokeAdminButton({ email }: { email: string }) {
+  const [isPending, start] = useTransition();
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (done) return <span className="text-[11px] text-white/40">ההרשאה הוסרה</span>;
+
+  return (
+    <div className="flex items-center gap-2">
+      {error && <span className="text-[11px] text-[#E8503A]">{error}</span>}
+      <button
+        onClick={() => {
+          if (!confirm(`להסיר הרשאת מנהל/ת מ-${email}?`)) return;
+          start(async () => {
+            const r = await setAdminRoleByEmailAction({ email, makeAdmin: false });
+            if ("error" in r) setError(r.error);
+            else setDone(true);
+          });
+        }}
+        disabled={isPending}
+        className="rounded px-2.5 py-1 text-[11px] font-bold bg-white/10 text-white/50 hover:bg-white/15 disabled:opacity-40"
+      >
+        הסר הרשאה
+      </button>
     </div>
   );
 }

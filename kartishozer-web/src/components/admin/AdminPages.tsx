@@ -8,6 +8,7 @@ import {
   getAdminDisputes,
   getAdminPayouts,
   getAdminVendors,
+  getAdminUsersWithRole,
   getPlatformConfig,
   getAuditLog,
 } from "@/lib/admin/queries";
@@ -17,6 +18,8 @@ import {
   PayoutActionButtons,
   VendorActionButtons,
   ConfigEditor,
+  GrantAdminForm,
+  RevokeAdminButton,
 } from "@/components/admin/AdminActionButtons";
 
 export const disputesMeta: Metadata = { title: "סכסוכים | Admin" };
@@ -262,6 +265,48 @@ export async function UsersPage({
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+// ── AdminsPage ────────────────────────────────────────────────
+// Distinct from UsersPage above: that one lists Vendors (marketplace
+// sellers) from our own database. This lists whoever currently holds
+// the ADMIN role, which lives only in Clerk — see getAdminUsersWithRole.
+
+export async function AdminsPage() {
+  const currentAdmin = await requireAdminUser();
+  const admins = await getAdminUsersWithRole();
+
+  return (
+    <div>
+      <AdminPageHeader title="מנהלי מערכת" count={admins.length} />
+
+      <div className="mb-6 max-w-md rounded-xl border border-white/10 bg-white/5 p-4">
+        <GrantAdminForm />
+      </div>
+
+      <div className="rounded-xl border border-white/10 overflow-hidden divide-y divide-white/5">
+        {admins.length === 0 ? (
+          <p className="px-4 py-6 text-xs text-white/40 text-center">לא נמצאו מנהלי מערכת.</p>
+        ) : (
+          admins.map((a) => (
+            <div key={a.clerkId} className="flex items-center justify-between px-4 py-3">
+              <div>
+                <p className="text-sm font-bold text-white/80">{a.fullName}</p>
+                <p className="text-xs text-white/50" dir="ltr">
+                  {a.email}
+                </p>
+              </div>
+              {a.email.toLowerCase() === currentAdmin.email.toLowerCase() ? (
+                <span className="text-[11px] text-white/30">זה/ו אתם</span>
+              ) : (
+                <RevokeAdminButton email={a.email} />
+              )}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
