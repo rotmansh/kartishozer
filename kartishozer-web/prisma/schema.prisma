@@ -227,9 +227,14 @@ model Listing {
 
   riskAssessment        ListingRisk?
   riskAssessmentHistory RiskAssessmentEvent[]
-  orders                Order[]
+  orders                Order[]              @relation("OrderListing")
   favorites             Favorite[]
   ticketFile            TicketFile?
+  // The order (if any) that this listing was one-click-resold from — see
+  // Order.resoldAsListing below. Purely the Prisma-required inverse side
+  // of that relation; nothing in the app queries a listing backwards to
+  // find its origin order today.
+  resoldFromOrder       Order?               @relation("OrderResoldListing")
 
   @@index([status])
   @@index([eventId])
@@ -303,6 +308,10 @@ enum RiskAssessmentTrigger {
   // re-encoded copy of the same physical ticket, which DUPLICATE_FILE_DETECTED
   // (exact bytes only) misses entirely.
   DUPLICATE_QR_DETECTED
+  // Created via resellOrderAction (one-click resell of a buyer's own
+  // paid order), not the normal sell wizard — kept distinct in the audit
+  // trail from a plain LISTING_CREATED.
+  ORDER_RESOLD
 }
 
 model RiskAssessmentEvent {
@@ -349,7 +358,7 @@ enum OrderStatus {
 model Order {
   id               String      @id @default(cuid())
   listingId        String
-  listing          Listing     @relation(fields: [listingId], references: [id])
+  listing          Listing     @relation("OrderListing", fields: [listingId], references: [id])
   eventId          String
   event            Event       @relation(fields: [eventId], references: [id])
   buyerId          String
@@ -358,6 +367,14 @@ model Order {
   vendor           Vendor      @relation(fields: [vendorId], references: [id])
   quantity         Int
   priceAgorot      Int
+  // Snapshotted at purchase time, same principle as priceAgorot/
+  // buyerFeeAgorot/totalAgorot above (see OrderPricing's own doc comment)
+  // — the Listing's own faceValueAgorot keeps changing after this order
+  // (reduced by later partial sales, or zeroed out once fully sold), so
+  // this is the only reliable record of what this specific order's face
+  // value actually was. Used by resellOrderAction to default the new
+  // listing's own faceValueAgorot when a buyer relists their ticket.
+  faceValueAgorot  Int
   buyerFeeAgorot   Int
   totalAgorot      Int
   status           OrderStatus @default(PENDING)
@@ -366,6 +383,14 @@ model Order {
   providerIntentId String?
   paidAt           DateTime?
   createdAt        DateTime    @default(now())
+
+  // Set once this order's ticket has been one-click-resold into a new
+  // Listing (see resellOrderAction) — null means "not yet resold".
+  // One-directional and one-shot: nothing here or in that action ever
+  // clears it back to null, since re-enabling a second resell of the same
+  // physical ticket would let it be sold twice over.
+  resoldAsListingId String?  @unique
+  resoldAsListing   Listing? @relation("OrderResoldListing", fields: [resoldAsListingId], references: [id])
 
   disputes      Dispute[]
   payouts       Payout[]

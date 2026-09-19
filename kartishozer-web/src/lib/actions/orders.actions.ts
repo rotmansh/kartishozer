@@ -109,6 +109,7 @@ export async function createOrderAction(listingId: string, requestedQuantity: nu
         vendorId: listing.vendorId,
         quantity: requestedQuantity,
         priceAgorot: subtotalPriceAgorot,
+        faceValueAgorot: subtotalFaceValueAgorot,
         buyerFeeAgorot: totals.buyerFeeAgorot,
         totalAgorot: totals.totalAgorot,
         status: "PAID",

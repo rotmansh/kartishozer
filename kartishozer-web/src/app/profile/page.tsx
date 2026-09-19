@@ -27,6 +27,7 @@ import { OpenDisputeButton } from "@/components/OpenDisputeButton";
 import { DisputePanel } from "@/components/DisputePanel";
 import { ConfirmTicketReceivedButton } from "@/components/ConfirmTicketReceivedButton";
 import { SellerReviewForm } from "@/components/SellerReviewForm";
+import { ResellOrderButton } from "@/components/ResellOrderButton";
 
 export default async function ProfilePage() {
   const user = await getAppUser();
@@ -262,6 +263,10 @@ export default async function ProfilePage() {
                 {["TICKET_DELIVERED", "CONFIRMED"].includes(o.status) &&
                   o.disputes.length === 0 &&
                   !o.sellerReview && <SellerReviewForm orderId={o.id} />}
+                {["PAID", "CONFIRMED", "TICKET_DELIVERED"].includes(o.status) &&
+                  o.disputes.length === 0 &&
+                  !o.resoldAsListingId &&
+                  o.event.startsAt.getTime() >= Date.now() && <ResellOrderButton orderId={o.id} />}
               </div>
             ))}
           </div>

@@ -331,6 +331,134 @@ export async function createListingAction(
   return { listingId: listing.id };
 }
 
+// A completed order is "yours to resell" during the exact same window
+// it's yours to dispute about (see DISPUTABLE_ORDER_STATUSES in
+// disputes.actions.ts) — PAID onward, not before (nothing to resell yet)
+// and not once it's DISPUTED/REFUNDED/PARTIALLY_REFUNDED/CANCELLED
+// (already says the transaction didn't hold).
+const RESELLABLE_ORDER_STATUSES = ["PAID", "CONFIRMED", "TICKET_DELIVERED"] as const;
+
+/**
+ * One-click resell: a buyer who already paid for a ticket and can't use it
+ * relists the exact same event/quantity/price/face-value as a brand-new
+ * Listing under their own vendor account — no separate form, since
+ * Order.priceAgorot/faceValueAgorot are the same "total for this many
+ * tickets" snapshot a fresh listing needs (see Order.faceValueAgorot's own
+ * doc comment). Reselling at cost is always legally allowed on its own
+ * (guaranteed <= the true face value, since the original purchase already
+ * passed this same check), but checkMarkupAllowed/assessListingRisk still
+ * run exactly as they would for any other new listing — a resold ticket
+ * gets no special trust, and if it happens to be an exact-file or QR
+ * duplicate of a ticket already listed elsewhere, the existing
+ * duplicate-detection in ticketFiles.actions.ts still catches it the
+ * moment a ticket file is uploaded to this new listing.
+ */
+export async function resellOrderAction(orderId: string): Promise<ActionResult> {
+  const user = await getAppUser();
+  if (!user) return { error: "יש להתחבר" };
+
+  const order = await db.order.findUnique({
+    where: { id: orderId },
+    include: {
+      event: true,
+      disputes: { where: { status: { in: ["OPEN", "UNDER_REVIEW"] } }, select: { id: true } },
+    },
+  });
+  if (!order || order.buyerId !== user.id) return { error: "ההזמנה לא נמצאה" };
+  if (order.resoldAsListingId) return { error: "ההזמנה הזו כבר פורסמה מחדש למכירה" };
+  if (order.disputes.length > 0) return { error: "לא ניתן לפרסם מחדש הזמנה עם מחלוקת פתוחה" };
+  if (!RESELLABLE_ORDER_STATUSES.includes(order.status as (typeof RESELLABLE_ORDER_STATUSES)[number])) {
+    return { error: "לא ניתן לפרסם מחדש הזמנה זו" };
+  }
+  if (order.event.startsAt.getTime() < Date.now()) {
+    return { error: "לא ניתן לפרסם מחדש כרטיס לאירוע שכבר עבר" };
+  }
+
+  const vendor = await db.vendor.upsert({
+    where: { userId: user.id },
+    create: { userId: user.id, displayName: user.fullName },
+    update: {},
+  });
+  if (vendor.status === "SUSPENDED") {
+    return { error: "חשבון המוכר שלכם מושעה כרגע ולא ניתן לפרסם כרטיסים חדשים" };
+  }
+
+  const markupError = await checkMarkupAllowed(order.priceAgorot, order.faceValueAgorot);
+  if (markupError) return { error: markupError };
+
+  const risk = await assessListingRisk({
+    vendorId: vendor.id,
+    isVendorVerified: vendor.isVerified,
+    eventId: order.eventId,
+    quantity: order.quantity,
+    priceAgorot: order.priceAgorot,
+    faceValueAgorot: order.faceValueAgorot,
+  });
+  await promoteVendorIfTrusted(vendor.id, vendor.verificationLevel, risk.trustedSellerCredit);
+
+  const listing = await db.$transaction(async (tx) => {
+    const created = await tx.listing.create({
+      data: {
+        eventId: order.eventId,
+        vendorId: vendor.id,
+        status: risk.status,
+        quantity: order.quantity,
+        priceAgorot: order.priceAgorot,
+        faceValueAgorot: order.faceValueAgorot,
+        isSafePassExchange: true,
+        offersOfficialTransfer: false,
+        riskScore: risk.totalScore,
+        riskLevel: risk.riskLevel,
+        riskAssessment: {
+          create: {
+            decision: risk.decision,
+            riskEngineVersion: risk.riskEngineVersion,
+            totalScore: risk.totalScore,
+            duplicateBarcode: risk.duplicateBarcode,
+            duplicatePdfHash: risk.duplicatePdfHash,
+            suspiciousFaceValue: risk.suspiciousFaceValue,
+            highRiskAccount: risk.highRiskAccount,
+            bulkListingFlag: risk.bulkListingFlag,
+            repeatEventFlag: risk.repeatEventFlag,
+            highQuantityFlag: risk.highQuantityFlag,
+            highValueTicketFlag: risk.highValueTicketFlag,
+            pastDisputeFlag: risk.pastDisputeFlag,
+            trustedSellerCredit: risk.trustedSellerCredit,
+          },
+        },
+      },
+    });
+
+    // Same guard spirit as the checkout race fix: only ever set once, by
+    // whichever request gets here first — not that two concurrent resells
+    // of the same order are a realistic race, but there's no reason not
+    // to make this a CAS anyway.
+    const claimed = await tx.order.updateMany({
+      where: { id: order.id, resoldAsListingId: null },
+      data: { resoldAsListingId: created.id },
+    });
+    if (claimed.count === 0) throw new Error("ALREADY_RESOLD");
+
+    return created;
+  }).catch((err) => {
+    if (err instanceof Error && err.message === "ALREADY_RESOLD") return null;
+    throw err;
+  });
+
+  if (!listing) return { error: "ההזמנה הזו כבר פורסמה מחדש למכירה" };
+
+  await recordRiskAssessmentEvent(listing.id, vendor.id, "ORDER_RESOLD", risk);
+
+  if (risk.status === "ACTIVE") {
+    await notifyEventWaitlistIfFirstActiveListing(order.eventId, order.event.nameHe);
+  }
+
+  revalidatePath("/profile");
+  revalidatePath(`/event/${order.eventId}`);
+
+  return { listingId: listing.id };
+}
+
 const updateListingSchema = z.object({
   listingId: z.string().min(1),
   section: z.string().max(200).optional(),

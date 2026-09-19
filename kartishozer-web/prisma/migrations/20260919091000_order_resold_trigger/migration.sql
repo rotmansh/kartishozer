@@ -1,0 +1,1 @@
+ALTER TYPE "RiskAssessmentTrigger" ADD VALUE 'ORDER_RESOLD';
