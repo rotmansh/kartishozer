@@ -13,14 +13,15 @@ import { getAppUser } from "@/lib/auth/server";
 import { getUnreadConversationCount } from "@/lib/queries/messages";
 import { linkVisitorToUser } from "@/lib/analytics";
 
-// Paths a signed-in user can still reach without having accepted Terms yet
-// — the acceptance page itself (obviously), the legal pages it links to,
-// Clerk's own auth pages, and /admin (a separate internal tool gated by
-// isAdmin(), not by this consumer-marketplace consent).
-const TERMS_GATE_EXEMPT = ["/accept-terms", "/terms", "/privacy", "/sign-in", "/sign-up", "/admin"];
+// Terms acceptance is required only at the actual transaction points —
+// buying (checkout) or listing something for sale (sell) — not to browse
+// the rest of the site. Both are already sign-in-gated in middleware.ts,
+// so by the time this check runs the visitor is always a real signed-in
+// user, never anonymous.
+const TERMS_GATE_PATHS = ["/checkout", "/sell"];
 
-function isTermsGateExempt(pathname: string): boolean {
-  return TERMS_GATE_EXEMPT.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+function requiresTermsGate(pathname: string): boolean {
+  return TERMS_GATE_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
 const heebo = Heebo({
@@ -77,8 +78,8 @@ async function Shell({ children }: { children: React.ReactNode }) {
   const user = await getAppUser();
 
   if (user && !user.termsAcceptedAt) {
-    const pathname = (await headers()).get("x-pathname") ?? "/profile";
-    if (!isTermsGateExempt(pathname)) {
+    const pathname = (await headers()).get("x-pathname") ?? "";
+    if (requiresTermsGate(pathname)) {
       redirect(`/accept-terms?redirect=${encodeURIComponent(pathname)}`);
     }
   }
