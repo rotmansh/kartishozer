@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Heebo } from "next/font/google";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { heIL } from "@clerk/localizations";
@@ -10,6 +12,16 @@ import { AccessibilityWidget } from "@/components/AccessibilityWidget";
 import { getAppUser } from "@/lib/auth/server";
 import { getUnreadConversationCount } from "@/lib/queries/messages";
 import { linkVisitorToUser } from "@/lib/analytics";
+
+// Paths a signed-in user can still reach without having accepted Terms yet
+// — the acceptance page itself (obviously), the legal pages it links to,
+// Clerk's own auth pages, and /admin (a separate internal tool gated by
+// isAdmin(), not by this consumer-marketplace consent).
+const TERMS_GATE_EXEMPT = ["/accept-terms", "/terms", "/privacy", "/sign-in", "/sign-up", "/admin"];
+
+function isTermsGateExempt(pathname: string): boolean {
+  return TERMS_GATE_EXEMPT.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
 
 const heebo = Heebo({
   subsets: ["hebrew", "latin"],
@@ -63,6 +75,14 @@ const clerkAppearance = {
 
 async function Shell({ children }: { children: React.ReactNode }) {
   const user = await getAppUser();
+
+  if (user && !user.termsAcceptedAt) {
+    const pathname = (await headers()).get("x-pathname") ?? "/profile";
+    if (!isTermsGateExempt(pathname)) {
+      redirect(`/accept-terms?redirect=${encodeURIComponent(pathname)}`);
+    }
+  }
+
   const unreadCount = user ? await getUnreadConversationCount(user.id) : 0;
   if (user) await linkVisitorToUser(user.id);
 

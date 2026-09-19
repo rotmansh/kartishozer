@@ -9,6 +9,7 @@ const isProtectedRoute = createRouteMatcher([
   "/favorites(.*)",
   "/admin(.*)",
   "/user-profile(.*)",
+  "/accept-terms(.*)",
 ]);
 
 // Only publishableKey is passed explicitly here. Clerk's own
@@ -20,9 +21,16 @@ const isProtectedRoute = createRouteMatcher([
 // switch Clerk into its "dynamic keys" mode and require a CLERK_ENCRYPTION_KEY
 // env var just to avoid a (harmless but noisy) runtime warning. Leaving
 // secretKey unset lets Clerk read process.env.CLERK_SECRET_KEY normally.
+// Forwarded so the root layout (a Server Component, with no router access
+// of its own) can tell which page is being rendered — that's what lets it
+// skip the accept-terms redirect when the request IS already for
+// /accept-terms, without which it would redirect to itself forever.
 const clerkHandler: NextMiddleware = clerkMiddleware(
   async (auth, req) => {
     if (isProtectedRoute(req)) await auth.protect();
+    const headers = new Headers(req.headers);
+    headers.set("x-pathname", req.nextUrl.pathname);
+    return NextResponse.next({ request: { headers } });
   },
   { publishableKey: CLERK_PUBLISHABLE_KEY }
 );

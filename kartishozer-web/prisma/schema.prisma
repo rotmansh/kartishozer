@@ -27,6 +27,14 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Null means "hasn't agreed yet" — every new row starts this way, existing
+  // rows included, so introducing this requirement retroactively re-gates
+  // everyone who signed up before it existed instead of grandfathering them
+  // in silently. Set once, by acceptTermsAction, and never cleared back to
+  // null — a later Terms update is a business decision to re-prompt (bump
+  // the copy's own version elsewhere), not something this column tracks.
+  termsAcceptedAt DateTime?
+
   vendor       Vendor?
   orders       Order[]
   favorites    Favorite[]
