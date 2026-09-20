@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MyListingRow } from "@/components/MyListingRow";
-import { MyListingsHistory } from "@/components/MyListingsHistory";
+import { CollapsibleHistory } from "@/components/CollapsibleHistory";
 import { SignOutButton } from "@/components/SignOutButton";
 import { OpenDisputeButton } from "@/components/OpenDisputeButton";
 import { DisputePanel } from "@/components/DisputePanel";
@@ -101,6 +101,19 @@ export default async function ProfilePage() {
 
   const activeListings = myListings.filter((l) => l.status === "ACTIVE" || l.status === "PENDING_REVIEW");
   const historyListings = myListings.filter((l) => l.status !== "ACTIVE" && l.status !== "PENDING_REVIEW");
+
+  // An order is "still open" while it can still need something from
+  // whoever's looking at it — awaiting payment/delivery, or an active
+  // dispute. Once the ticket's been confirmed/delivered or the order's
+  // reached a final refund/cancellation state, it's done — a possible
+  // follow-up (a seller review, a dispute window) doesn't change that,
+  // same as a SOLD listing above going to history despite a dispute
+  // technically still being possible against it.
+  const ORDER_HISTORY_STATUSES = ["CONFIRMED", "TICKET_DELIVERED", "PARTIALLY_REFUNDED", "REFUNDED", "CANCELLED"];
+  const activeOrders = myOrders.filter((o) => !ORDER_HISTORY_STATUSES.includes(o.status));
+  const historyOrders = myOrders.filter((o) => ORDER_HISTORY_STATUSES.includes(o.status));
+  const activeSales = mySales.filter((o) => !ORDER_HISTORY_STATUSES.includes(o.status));
+  const historySales = mySales.filter((o) => ORDER_HISTORY_STATUSES.includes(o.status));
 
   // "התראות" was removed — there's no notification system behind it yet,
   // and a menu item that does nothing when tapped is worse than no item.
@@ -208,20 +221,25 @@ export default async function ProfilePage() {
               />
             ))}
             {historyListings.length > 0 && (
-              <MyListingsHistory
-                listings={historyListings.map((l) => ({
-                  id: l.id,
-                  status: l.status,
-                  section: l.section,
-                  quantity: l.quantity,
-                  priceAgorot: l.priceAgorot,
-                  isSafePassExchange: l.isSafePassExchange,
-                  note: l.note,
-                  eventNameHe: l.event.nameHe,
-                  eventStartsAt: l.event.startsAt.toISOString(),
-                  hasTicketFile: Boolean(l.ticketFile),
-                }))}
-              />
+              <CollapsibleHistory label="היסטוריה — נמכרו / הוסרו" count={historyListings.length}>
+                {historyListings.map((l) => (
+                  <MyListingRow
+                    key={l.id}
+                    listing={{
+                      id: l.id,
+                      status: l.status,
+                      section: l.section,
+                      quantity: l.quantity,
+                      priceAgorot: l.priceAgorot,
+                      isSafePassExchange: l.isSafePassExchange,
+                      note: l.note,
+                      eventNameHe: l.event.nameHe,
+                      eventStartsAt: l.event.startsAt.toISOString(),
+                      hasTicketFile: Boolean(l.ticketFile),
+                    }}
+                  />
+                ))}
+              </CollapsibleHistory>
             )}
           </div>
         )}
@@ -236,7 +254,7 @@ export default async function ProfilePage() {
           </div>
         ) : (
           <div className="px-4 space-y-3">
-            {myOrders.map((o) => (
+            {activeOrders.map((o) => (
               <div key={o.id} className="rounded-2xl bg-white border border-ink-900/5 shadow-card p-4">
                 <Link href={`/event/${o.eventId}`} className="block">
                   <div className="flex items-start justify-between gap-3">
@@ -295,6 +313,66 @@ export default async function ProfilePage() {
                   o.event.startsAt.getTime() >= Date.now() && <ResellOrderButton orderId={o.id} />}
               </div>
             ))}
+            {historyOrders.length > 0 && (
+              <CollapsibleHistory label="היסטוריה — הזמנות שהושלמו" count={historyOrders.length}>
+                {historyOrders.map((o) => (
+                  <div key={o.id} className="rounded-2xl bg-white border border-ink-900/5 shadow-card p-4">
+                    <Link href={`/event/${o.eventId}`} className="block">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-ink-900 truncate">{o.event.nameHe}</p>
+                          <p className="text-[11px] text-ink-500 mt-0.5">{fmtDate(o.createdAt.toISOString())}</p>
+                        </div>
+                        <Badge tone={ORDER_STATUS_TONE[o.status] ?? "neutral"}>
+                          {ORDER_STATUS_LABELS[o.status] ?? o.status}
+                        </Badge>
+                      </div>
+                      <p className="font-black text-ink-900 mt-2">{fmtAgorot(o.totalAgorot)}</p>
+                    </Link>
+                    {o.conversation && (
+                      <Link
+                        href={`/messages/${o.conversation.id}`}
+                        className="tap mt-3 pt-3 border-t border-ink-900/5 flex items-center gap-1.5 text-xs font-bold text-brand-600"
+                      >
+                        <MessageCircle size={14} />
+                        תיאום מסירה עם המוכר/ת
+                        {hasUnreadMessage(o.conversation, user.id) && (
+                          <span className="h-2 w-2 rounded-full bg-brand" />
+                        )}
+                      </Link>
+                    )}
+                    {o.listing.ticketFile &&
+                      ["PAID", "CONFIRMED", "TICKET_DELIVERED", "DISPUTED"].includes(o.status) && (
+                        <a
+                          href={`/api/tickets/${o.listingId}`}
+                          className="tap mt-3 pt-3 border-t border-ink-900/5 flex items-center gap-1.5 text-xs font-bold text-accent-600"
+                        >
+                          <FileDown size={14} />
+                          צפייה בקובץ הכרטיס
+                        </a>
+                      )}
+                    {["PAID", "CONFIRMED", "TICKET_DELIVERED"].includes(o.status) &&
+                      (o.disputes.length > 0 ? (
+                        <DisputePanel
+                          disputeId={o.disputes[0].id}
+                          viewerRole="BUYER"
+                          sellerResponse={o.disputes[0].sellerResponse}
+                          evidence={o.disputes[0].evidence.map((e) => ({ ...e, createdAt: e.createdAt.toISOString() }))}
+                        />
+                      ) : (
+                        <OpenDisputeButton orderId={o.id} />
+                      ))}
+                    {["TICKET_DELIVERED", "CONFIRMED"].includes(o.status) &&
+                      o.disputes.length === 0 &&
+                      !o.sellerReview && <SellerReviewForm orderId={o.id} />}
+                    {["PAID", "CONFIRMED", "TICKET_DELIVERED"].includes(o.status) &&
+                      o.disputes.length === 0 &&
+                      !o.resoldAsListingId &&
+                      o.event.startsAt.getTime() >= Date.now() && <ResellOrderButton orderId={o.id} />}
+                  </div>
+                ))}
+              </CollapsibleHistory>
+            )}
           </div>
         )}
       </div>
@@ -309,7 +387,7 @@ export default async function ProfilePage() {
             </div>
           ) : (
             <div className="px-4 space-y-3">
-              {mySales.map((o) => (
+              {activeSales.map((o) => (
                 <div key={o.id} className="rounded-2xl bg-white border border-ink-900/5 shadow-card p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -345,6 +423,46 @@ export default async function ProfilePage() {
                   )}
                 </div>
               ))}
+              {historySales.length > 0 && (
+                <CollapsibleHistory label="היסטוריה — מכירות שהושלמו" count={historySales.length}>
+                  {historySales.map((o) => (
+                    <div key={o.id} className="rounded-2xl bg-white border border-ink-900/5 shadow-card p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-ink-900 truncate">{o.event.nameHe}</p>
+                          <p className="text-[11px] text-ink-500 mt-0.5">
+                            נקנה על ידי {o.buyerName} · {fmtDate(o.createdAt.toISOString())}
+                          </p>
+                        </div>
+                        <Badge tone={ORDER_STATUS_TONE[o.status] ?? "neutral"}>
+                          {ORDER_STATUS_LABELS[o.status] ?? o.status}
+                        </Badge>
+                      </div>
+                      <p className="font-black text-ink-900 mt-2">{fmtAgorot(o.priceAgorot)}</p>
+                      {o.conversation && (
+                        <Link
+                          href={`/messages/${o.conversation.id}`}
+                          className="tap mt-3 pt-3 border-t border-ink-900/5 flex items-center gap-1.5 text-xs font-bold text-brand-600"
+                        >
+                          <MessageCircle size={14} />
+                          תיאום מסירה עם הקונה/ת
+                          {hasUnreadMessage(o.conversation, user.id) && (
+                            <span className="h-2 w-2 rounded-full bg-brand" />
+                          )}
+                        </Link>
+                      )}
+                      {o.disputes.length > 0 && (
+                        <DisputePanel
+                          disputeId={o.disputes[0].id}
+                          viewerRole="SELLER"
+                          sellerResponse={o.disputes[0].sellerResponse}
+                          evidence={o.disputes[0].evidence.map((e) => ({ ...e, createdAt: e.createdAt.toISOString() }))}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </CollapsibleHistory>
+              )}
             </div>
           )}
         </div>
