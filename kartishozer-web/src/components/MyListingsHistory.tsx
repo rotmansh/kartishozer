@@ -20,7 +20,7 @@ export function MyListingsHistory({ listings }: { listings: MyListing[] }) {
         className="tap w-full flex items-center justify-between rounded-2xl bg-ink-100 px-4 h-11 text-sm font-bold text-ink-700"
         aria-expanded={open}
       >
-        <span>היסטוריה — נמכרו / הוסרו ({listings.length})</span>
+        <span>{open ? "הסתר" : "הצג"} היסטוריה — נמכרו / הוסרו ({listings.length})</span>
         <ChevronDown size={16} className={open ? "rotate-180 transition-transform" : "transition-transform"} />
       </button>
       {open && (
