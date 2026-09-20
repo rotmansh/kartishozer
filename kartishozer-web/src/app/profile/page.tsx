@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MyListingRow } from "@/components/MyListingRow";
+import { MyListingsHistory } from "@/components/MyListingsHistory";
 import { SignOutButton } from "@/components/SignOutButton";
 import { OpenDisputeButton } from "@/components/OpenDisputeButton";
 import { DisputePanel } from "@/components/DisputePanel";
@@ -98,6 +99,9 @@ export default async function ProfilePage() {
     isAdmin(),
   ]);
 
+  const activeListings = myListings.filter((l) => l.status === "ACTIVE" || l.status === "PENDING_REVIEW");
+  const historyListings = myListings.filter((l) => l.status !== "ACTIVE" && l.status !== "PENDING_REVIEW");
+
   // "התראות" was removed — there's no notification system behind it yet,
   // and a menu item that does nothing when tapped is worse than no item.
   // "לוח ניהול" only shows for admins — this is the one place a signed-in
@@ -164,7 +168,11 @@ export default async function ProfilePage() {
         </div>
       </div>
 
-      {/* My listings (sold tickets are ones with status SOLD inside this same list) */}
+      {/* My listings — active/pending shown directly; sold/rejected/
+          suspended ones (which can never be delisted, since they're real
+          transaction history) are tucked behind a collapsed toggle below
+          so a seller with a long sales history doesn't get an
+          ever-growing scroll here by default. */}
       <div className="mt-6">
         <h2 className="px-4 text-sm font-black text-ink-900 mb-2">המודעות שלי</h2>
         {myListings.length === 0 ? (
@@ -182,7 +190,7 @@ export default async function ProfilePage() {
           </div>
         ) : (
           <div className="px-4 space-y-3">
-            {myListings.map((l) => (
+            {activeListings.map((l) => (
               <MyListingRow
                 key={l.id}
                 listing={{
@@ -199,6 +207,22 @@ export default async function ProfilePage() {
                 }}
               />
             ))}
+            {historyListings.length > 0 && (
+              <MyListingsHistory
+                listings={historyListings.map((l) => ({
+                  id: l.id,
+                  status: l.status,
+                  section: l.section,
+                  quantity: l.quantity,
+                  priceAgorot: l.priceAgorot,
+                  isSafePassExchange: l.isSafePassExchange,
+                  note: l.note,
+                  eventNameHe: l.event.nameHe,
+                  eventStartsAt: l.event.startsAt.toISOString(),
+                  hasTicketFile: Boolean(l.ticketFile),
+                }))}
+              />
+            )}
           </div>
         )}
       </div>
