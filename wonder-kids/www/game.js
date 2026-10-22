@@ -730,7 +730,7 @@
   const keys = new Set();
   const KEYMAP = {
     ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
-    ArrowUp: 'jump', KeyW: 'jump', Space: 'jump', KeyZ: 'jump', KeyK: 'jump',
+    ArrowUp: 'jump', KeyW: 'jump', Space: 'jump', KeyZ: 'jump', KeyK: 'jump', ArrowDown: 'brake',
     KeyX: 'fire', KeyJ: 'fire', ControlLeft: 'fire', ShiftLeft: 'fire',
   };
   const touch = { left: false, right: false, jump: false, fire: false };
@@ -756,6 +756,7 @@
     { id: 'police', name: 'ניידת משטרה', ring: '#1f4fb5' },
     { id: 'star', name: 'כוכב החובש', ring: '#1e6be0' },
     { id: 'badge', name: 'תג שוטר', ring: '#e0a91a' },
+    { id: 'truck', name: 'כיבוי שריפות', ring: '#d8352c' },
     { id: 'hearts', name: 'כל הלבבות', ring: '#ff4d6d' },
   ];
   let stickers = new Set(), newStickers = [];
@@ -767,7 +768,7 @@
     if (stickers.has(id)) return;
     stickers.add(id); newStickers.push(id);
     try { localStorage.setItem(stickerKey(), JSON.stringify([...stickers])); } catch (e) { /* storage blocked */ }
-    if (player) popups.push({ x: player.x, y: player.y - 26, text: 'מדבקה חדשה!', t: 0 });
+    if (player && state !== 'truck') popups.push({ x: player.x, y: player.y - 26, text: 'מדבקה חדשה!', t: 0 });
   }
   let lives = 3, score = 0, hiscore = 0, checkpoint = 0, frame = 0, clearBonus = 0;
   let charIdx = 0, levelIdx = 0;
@@ -1252,6 +1253,7 @@
   function update() {
     frame++; stateT++;
     readInput();
+    if (state === 'truck') { updateTruck(); return; }
     if (state === 'play' || state === 'dying' || state === 'clear') {
       if (state === 'play' || state === 'clear') {
         if (state === 'clear') { input.left = input.right = input.jump = input.fire = false; }
@@ -1502,7 +1504,7 @@
     ctx.beginPath(); ctx.arc(cx, cy, r - 2.5, 0, Math.PI * 2); ctx.fill();
     if (!earned) { text('?', cx, cy + 1, r, 'rgba(255,255,255,0.45)', 'center', false); return; }
     if (id === 'hearts') { drawHeart(cx - 7, cy, true); drawHeart(cx + 7, cy, true); drawHeart(cx, cy + 9, true); return; }
-    const img = { kitten: ART.kitten.r, helmet: ART.helmet.r, firetruck: ART.firetruck, ambulance: ART.ambulance,
+    const img = { kitten: ART.kitten.r, helmet: ART.helmet.r, firetruck: ART.firetruck, truck: ART.firetruck, ambulance: ART.ambulance,
       police: ART.police, star: ART.star.r, badge: ART.badge.r }[id];
     const k = Math.min((r * 1.45) / img.width, (r * 1.2) / img.height);
     ctx.drawImage(img, Math.round(cx - img.width * k / 2), Math.round(cy - img.height * k / 2), Math.round(img.width * k), Math.round(img.height * k));
@@ -1513,11 +1515,11 @@
     text('האלבום של ' + CHARACTERS[charIdx].name, W / 2, 22, 16, '#ffd23f', 'center', '#a5241d');
     text(stickers.size + ' מתוך ' + STICKERS.length + ' מדבקות', W / 2, 42, 8, '#ffffff', 'center', false);
     STICKERS.forEach((st, i) => {
-      const col = i % 4, row = (i / 4) | 0;
-      const cx = W / 2 + (1.5 - col) * 80, cy = 84 + row * 72;
+      const col = i % 5, row = (i / 5) | 0;
+      const cx = W / 2 + (2 - col) * 70, cy = 78 + row * 68;
       const earned = stickers.has(st.id);
-      drawSticker(st.id, cx, cy, 24, earned);
-      text(earned ? st.name : '???', cx, cy + 34, 7, earned ? '#ffffff' : 'rgba(255,255,255,0.5)', 'center', false);
+      drawSticker(st.id, cx, cy, 21, earned);
+      text(earned ? st.name : '???', cx, cy + 31, 7, earned ? '#ffffff' : 'rgba(255,255,255,0.5)', 'center', false);
     });
     if ((frame >> 5) & 1) text('לחצו כדי לחזור', W / 2, 206, 8, '#ffffff', 'center', false);
   }
@@ -1534,6 +1536,10 @@
     text('חמישיית ההצלה', W / 2, 28, 26, '#ffd23f', 'center', '#a5241d');
     text('בחרו גיבור', W / 2, 50, 10, '#ffffff');
     if (hiscore) text('שיא: ' + hiscore, W - 30, 10, 7, '#ffffff', 'center');
+    truckBtn = { x: 6, y: 29, w: 92, h: 18 };
+    ctx.fillStyle = '#2f7bff'; ctx.fillRect(truckBtn.x, truckBtn.y, truckBtn.w, truckBtn.h);
+    ctx.fillStyle = '#1f4fb5'; ctx.fillRect(truckBtn.x, truckBtn.y + truckBtn.h - 2, truckBtn.w, 2);
+    text('🚒 סימולטור כבאית', truckBtn.x + truckBtn.w / 2, truckBtn.y + 9, 7, '#ffffff', 'center', false);
     albumBtn = { x: 6, y: 6, w: 92, h: 20 };
     ctx.fillStyle = '#ffd23f'; ctx.fillRect(albumBtn.x, albumBtn.y, albumBtn.w, albumBtn.h);
     ctx.fillStyle = '#a5241d'; ctx.fillRect(albumBtn.x, albumBtn.y + albumBtn.h - 2, albumBtn.w, 2);
@@ -1575,7 +1581,7 @@
     });
     if ((frame >> 5) & 1) text('לחצו על ' + CHARACTERS[0].name + ' כדי להתחיל', W / 2, 205, 8, '#ffffff', 'center', '#3a2a1c');
   }
-  let titleCards = [], titleChips = [], albumBtn = null;
+  let titleCards = [], titleChips = [], albumBtn = null, truckBtn = null;
   let previewSprite = null, previewFor = null;
   function setHeroPreview(ch) {
     if (previewFor === ch) return;
@@ -1619,6 +1625,7 @@
     ctx.imageSmoothingEnabled = false;
     if (state === 'title') { drawTitle(); return; }
     if (state === 'album') { drawAlbum(); return; }
+    if (state === 'truck') { drawTruck(); return; }
     drawWorld();
     if (state === 'intro') {
       ctx.fillStyle = 'rgba(22,33,58,0.75)'; ctx.fillRect(0, 70, W, 70);
@@ -1669,6 +1676,331 @@
     }
   }
 
+  // ---------------------------------------------------------------- fire truck drive
+  // Sitting in the cab: two hands on the wheel, the road coming at the
+  // truck, cars, cones and puddles to steer around, and fires along the
+  // buildings to put out with the water cannon. The driver cannot lose.
+  const HORIZON = 62, DASH_Y = 150, VIEW = 60, DRIVE_LEN = 600;
+  const WHEEL = { cx: 192, cy: 178, r: 29 };
+  const DASH_BTNS = [
+    { id: 'siren', x: 24, y: 186, label: "צ'קלקה", icon: '🚨', col: '#d8352c' },
+    { id: 'pa', x: 68, y: 186, label: 'כריזה', icon: '📢', col: '#2f7bff' },
+    { id: 'horn', x: 112, y: 186, label: 'צופר', icon: '📯', col: '#e0a91a' },
+    { id: 'water', x: 272, y: 186, label: 'מים', icon: '💧', col: '#2a8fd0', hold: true },
+    { id: 'brake', x: 316, y: 186, label: 'בלם', icon: '🛑', col: '#8f1a14', hold: true },
+  ];
+  const PA_LINES = ['זהירות! מכבי אש בדרך!', 'שלום לכולם! אנחנו בדרך לכבות שריפה!', 'תפנו דרך לכבאית!'];
+  const BUILD_COLS = ['#f2b880', '#e88f7a', '#f5d07a', '#c9a0dc', '#9fd3f5'];
+  const CAR_COLS = ['#d8352c', '#2f7bff', '#2ea043', '#f5f5f5', '#e0a91a'];
+  let tr = null;
+
+  const roadX = z => 1.1 * Math.sin(z * 0.018) + 0.5 * Math.sin(z * 0.047);
+  const bend = zw => roadX(zw) - roadX(tr.z);
+  // Screen spot for a point ox to the side of the road, zw ahead of the start.
+  function project(ox, zw) {
+    const d = zw - tr.z, s = 1 / (1 + d / 6), u = ox + bend(zw) - tr.x;
+    return { x: W / 2 + u * 58 * s, y: HORIZON + (DASH_Y - HORIZON) * s, s, d, u };
+  }
+  const msg = text => { tr.msg = { text, t: 0 }; };
+  const heldId = id => !!tr && [...tr.held.values()].includes(id);
+  function btnOn(id) {
+    if (id === 'siren') return tr.siren;
+    if (id === 'pa') return tr.paFlash > 0;
+    if (id === 'horn') return tr.hornT > 0;
+    if (id === 'water') return heldId('water') || keys.has('Space');
+    return heldId('brake') || keys.has('ArrowDown');
+  }
+  function announce() {
+    const line = PA_LINES[(Math.random() * PA_LINES.length) | 0];
+    try {
+      if (window.speechSynthesis) {
+        const u = new SpeechSynthesisUtterance(line);
+        u.lang = 'he-IL'; u.rate = 0.9; u.pitch = 1.4;
+        speechSynthesis.cancel(); speechSynthesis.speak(u);
+      }
+    } catch (e) { /* no speech in this browser */ }
+    if (AC) { const t0 = AC.currentTime; tone(sfxBus, 'square', 660, t0, 0.2, 0.12); tone(sfxBus, 'square', 880, t0 + 0.22, 0.3, 0.12); }
+  }
+  function honk() {
+    if (!AC) return;
+    const t0 = AC.currentTime;
+    tone(sfxBus, 'sawtooth', 330, t0, 0.6, 0.1); tone(sfxBus, 'sawtooth', 415, t0, 0.6, 0.08);
+  }
+  function splash() { if (AC) noise(sfxBus, AC.currentTime, 0.25, 0.2, 1200); }
+  function pressOnce(id) {
+    if (id === 'siren') { tr.siren = !tr.siren; sfx('cp'); }
+    else if (id === 'pa') { announce(); tr.paFlash = 30; }
+    else if (id === 'horn') { honk(); tr.hornT = 30; }
+  }
+  function trKey(code) {
+    if (code === 'KeyS') pressOnce('siren');
+    else if (code === 'KeyH') pressOnce('horn');
+    else if (code === 'Enter') pressOnce('pa');
+    else if (code === 'Escape') leaveTruck();
+  }
+
+  function startTruck() {
+    charIdx = 0; loadStickers();
+    tr = {
+      z: 0, x: 0, v: 0, steer: 0, steerTarget: 0, wheelDrag: null, held: new Map(),
+      siren: false, paFlash: 0, hornT: 0, spraying: false, target: null, shake: 0, frame: 0, msg: null,
+      items: [], blds: [], nextItem: 30, nextBld: 0, fires: 0, arrived: false,
+    };
+    setState('truck');
+    Music.play(SONGS.city);
+    msg('ברוכים הבאים לכבאית!');
+  }
+  function leaveTruck() {
+    Music.stop(); tr = null; setState('title');
+  }
+
+  function spawnAhead() {
+    const t = tr, limit = Math.min(t.z + VIEW, DRIVE_LEN);
+    while (t.nextItem < limit) {
+      const r = Math.random(), z = t.nextItem;
+      if (r < 0.5) t.items.push({ kind: 'car', z, ox: [-0.8, 0, 0.8][(Math.random() * 3) | 0], col: CAR_COLS[(Math.random() * CAR_COLS.length) | 0] });
+      else if (r < 0.8) t.items.push({ kind: 'cone', z, ox: (Math.random() * 2 - 1) * 1.2 });
+      else t.items.push({ kind: 'puddle', z, ox: (Math.random() * 2 - 1) * 0.6 });
+      t.nextItem += 9 + Math.random() * 8;
+    }
+    while (t.nextBld < limit) {
+      t.blds.push({
+        z: t.nextBld, side: Math.round(t.nextBld / 9) % 2 ? -1 : 1, h: 3 + Math.random() * 3,
+        col: BUILD_COLS[(Math.random() * BUILD_COLS.length) | 0], fire: Math.random() < 0.3, life: 1, done: false,
+      });
+      t.nextBld += 9;
+    }
+  }
+
+  function updateTruck() {
+    const t = tr, dt = 1 / 60;
+    t.frame++;
+    const left = keys.has('ArrowLeft') || keys.has('KeyA'), right = keys.has('ArrowRight') || keys.has('KeyD');
+    if (!t.wheelDrag) t.steerTarget = left === right ? 0 : left ? -1 : 1;
+    t.steer += clamp(t.steerTarget - t.steer, -2.5 * dt, 2.5 * dt);
+
+    // Gas is automatic; the brake button stops the truck, and it stays stopped at the station.
+    const braking = heldId('brake') || keys.has('ArrowDown') || t.arrived;
+    const goal = braking ? 0 : 12;
+    t.v += clamp(goal - t.v, -(braking ? 24 : 4) * dt, 4 * dt);
+    const off = Math.abs(t.x) > 1.6;
+    t.z = Math.min(DRIVE_LEN, t.z + t.v * (off ? 0.6 : 1) * dt);
+    t.x = clamp(t.x + t.steer * (0.3 + t.v * 0.12) * dt, -2.6, 2.6);
+    if (t.z >= DRIVE_LEN && !t.arrived) { t.arrived = true; jingle('clear'); msg('הגענו לתחנה!'); }
+
+    spawnAhead();
+    for (const it of t.items) {
+      const d = it.z - t.z;
+      if (it.done || d > 1.4 || d < -0.5) continue;
+      if (Math.abs(it.ox + bend(it.z) - t.x) > 0.7) continue;
+      it.done = true;
+      if (it.kind === 'puddle') { t.v = Math.min(t.v, 4); splash(); }
+      else { t.v *= 0.3; t.shake = 14; sfx('trip'); msg('אופס!'); }
+    }
+
+    // The water cannon aims at the nearest burning building ahead.
+    let target = null;
+    for (const b of t.blds) {
+      const d = b.z - t.z;
+      if (b.fire && !b.done && d > 0.5 && d < VIEW && (!target || d < target.z - t.z)) target = b;
+    }
+    t.target = target;
+    t.spraying = !!target && (heldId('water') || keys.has('Space'));
+    if (t.spraying) {
+      target.life -= dt * 0.5;
+      if (target.life <= 0) {
+        target.done = true; t.fires++; sfx('item'); msg('כבה! כל הכבוד!');
+        if (t.fires === 3) award('truck');
+      }
+      if (t.frame % 20 === 0) sfx('hiss');
+    }
+
+    if (t.siren && t.frame % 50 === 0) sfx('siren');
+    if (t.paFlash > 0) t.paFlash--;
+    if (t.hornT > 0) t.hornT--;
+    if (t.shake > 0) t.shake--;
+    if (t.msg && ++t.msg.t > 80) t.msg = null;
+    t.items = t.items.filter(it => it.z - t.z > -2);
+    t.blds = t.blds.filter(b => b.z - t.z > -10);
+  }
+
+  // Pointers: the wheel is dragged, the buttons are pressed (hold ones stay down).
+  function truckGamePoint(ev) {
+    const r = canvas.getBoundingClientRect();
+    return { gx: (ev.clientX - r.left) / r.width * W, gy: (ev.clientY - r.top) / r.height * H };
+  }
+  function steerFromPointer(gx, gy) {
+    const ang = Math.atan2(gx - WHEEL.cx, WHEEL.cy - gy);
+    tr.steerTarget = clamp(ang / 1.1, -1, 1);
+  }
+  function truckDown(ev) {
+    if (state !== 'truck') return;
+    initAudio();
+    const { gx, gy } = truckGamePoint(ev);
+    if (tr.arrived || (gx < 56 && gy < 22)) { leaveTruck(); return; }
+    if (Math.hypot(gx - WHEEL.cx, gy - WHEEL.cy) < WHEEL.r + 14) { tr.wheelDrag = ev.pointerId; steerFromPointer(gx, gy); return; }
+    for (const b of DASH_BTNS) {
+      if (Math.hypot(gx - b.x, gy - b.y) < 19) {
+        if (b.hold) tr.held.set(ev.pointerId, b.id); else pressOnce(b.id);
+        return;
+      }
+    }
+  }
+  function truckMove(ev) {
+    if (state !== 'truck' || tr.wheelDrag !== ev.pointerId) return;
+    const { gx, gy } = truckGamePoint(ev);
+    steerFromPointer(gx, gy);
+  }
+  function truckUp(ev) {
+    if (state !== 'truck') return;
+    tr.held.delete(ev.pointerId);
+    if (tr.wheelDrag === ev.pointerId) { tr.wheelDrag = null; tr.steerTarget = 0; }
+  }
+
+  // ---- drawing
+  function stripe(a, b, col) {
+    ctx.fillStyle = col; ctx.beginPath();
+    for (let d = 0.3; d <= VIEW; d += 1.5) { const p = a(d); if (d === 0.3) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); }
+    for (let d = VIEW; d >= 0.3; d -= 1.5) { const p = b(d); ctx.lineTo(p.x, p.y); }
+    ctx.closePath(); ctx.fill();
+  }
+  function drawBuilding(b) {
+    const p = project(b.side * 3.4, b.z), w = 3.2 * 58 * p.s, hgt = b.h * 15 * p.s, x = p.x - w / 2, y = p.y - hgt;
+    ctx.fillStyle = b.col; ctx.fillRect(x, y, w, hgt);
+    ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(x, p.y - 2 * p.s - 1, w, 2 * p.s + 1);
+    if (w > 8) {
+      const rows = Math.max(1, Math.floor(hgt / 12)), ww = Math.max(2, w * 0.16), wh = Math.max(2, hgt / rows * 0.35);
+      ctx.fillStyle = '#fff6dc';
+      for (let r = 0; r < rows; r++) for (let c = 0; c < 3; c++) ctx.fillRect(x + w * (c + 0.5) / 3 - ww / 2, y + (r + 0.3) * hgt / rows, ww, wh);
+    }
+    if (b.fire && !b.done) {
+      const fw = (10 + 26 * p.s) * (0.4 + 0.6 * b.life), fh = fw * 16 / 12;
+      ctx.drawImage(ART.flame[(frame >> 3) & 1].r, p.x - fw / 2, y - fh * 0.8, fw, fh);
+    }
+  }
+  function drawItem(it) {
+    const p = project(it.ox, it.z);
+    if (it.kind === 'puddle') {
+      ctx.fillStyle = '#7ec8f0'; ctx.beginPath();
+      ctx.ellipse(p.x, p.y, 0.55 * 58 * p.s, 0.18 * 58 * p.s + 1, 0, 0, Math.PI * 2); ctx.fill();
+      return;
+    }
+    if (it.kind === 'cone') {
+      const w = 0.5 * 58 * p.s, h = w * 1.1, x = p.x - w / 2, y = p.y;
+      ctx.fillStyle = '#2b2b33'; ctx.fillRect(x - w * 0.1, y - w * 0.12, w * 1.2, Math.max(1, w * 0.12));
+      ctx.fillStyle = '#f08a1c'; ctx.beginPath();
+      ctx.moveTo(x, y - w * 0.12); ctx.lineTo(x + w, y - w * 0.12); ctx.lineTo(x + w / 2, y - h); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(x + w * 0.22, y - h * 0.55, w * 0.56, Math.max(1, h * 0.14));
+      return;
+    }
+    // A car, seen from behind as it drives away.
+    const w = 0.9 * 58 * p.s, h = w * 0.7, x = p.x - w / 2, y = p.y;
+    ctx.fillStyle = it.col; ctx.fillRect(x, y - h * 0.6, w, h * 0.6);
+    ctx.fillRect(x + w * 0.18, y - h, w * 0.64, h * 0.42);
+    ctx.fillStyle = '#1f2a3d'; ctx.fillRect(x + w * 0.26, y - h * 0.9, w * 0.48, h * 0.26);
+    ctx.fillStyle = '#ff3b30';
+    ctx.fillRect(x + w * 0.04, y - h * 0.4, w * 0.18, h * 0.16); ctx.fillRect(x + w * 0.78, y - h * 0.4, w * 0.18, h * 0.16);
+    ctx.fillStyle = '#15151a';
+    ctx.fillRect(x, y - h * 0.12, w * 0.2, h * 0.12); ctx.fillRect(x + w * 0.8, y - h * 0.12, w * 0.2, h * 0.12);
+  }
+
+  function drawTruck() {
+    const t = tr;
+    ctx.save();
+    if (t.shake) ctx.translate(Math.round((Math.random() * 2 - 1) * 2), 0);
+    ctx.drawImage(BG.sky, 0, 0, W, H);
+    ctx.fillStyle = '#fff3b0'; ctx.beginPath(); ctx.arc(330, 34, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#7cc65a'; ctx.fillRect(0, HORIZON, W, DASH_Y - HORIZON + 4);
+
+    // Road, sidewalks and lane markings, all laid out in perspective.
+    const L = d => project(-1.6, t.z + d), R = d => project(1.6, t.z + d);
+    stripe(d => project(-2.1, t.z + d), L, '#e5e0d4');
+    stripe(R, d => project(2.1, t.z + d), '#e5e0d4');
+    stripe(L, R, '#4a4e57');
+    for (const ox of [-0.8, 0, 0.8]) {
+      for (let z = Math.ceil(t.z / 6) * 6; z < t.z + VIEW; z += 6) {
+        if (z - t.z < 0.3) continue;
+        const a = project(ox - 0.05, z), b = project(ox + 0.05, z), c = project(ox + 0.05, z + 3), e = project(ox - 0.05, z + 3);
+        ctx.fillStyle = ox === 0 ? '#f5f1e6' : '#e6e0c8';
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.lineTo(e.x, e.y); ctx.closePath(); ctx.fill();
+      }
+    }
+
+    // Buildings and vehicles, far ones first so near ones cover them.
+    const list = [];
+    for (const b of t.blds) if (b.z - t.z > 0.3) list.push({ d: b.z - t.z, draw: () => drawBuilding(b) });
+    for (const it of t.items) if (it.z - t.z > 0.3) list.push({ d: it.z - t.z, draw: () => drawItem(it) });
+    list.sort((a, b) => b.d - a.d);
+    for (const o of list) o.draw();
+
+    // Water from the cannon to the fire.
+    if (t.spraying && t.target) {
+      const tg = project(t.target.side * 3.4, t.target.z), sx = W / 2, sy = DASH_Y - 4;
+      ctx.fillStyle = '#d9f1ff';
+      for (let i = 0; i < 18; i++) {
+        const f = (i / 18 + t.frame * 0.05) % 1;
+        const x = sx + (tg.x - sx) * f + (Math.random() - 0.5) * 3;
+        const y = sy + (tg.y - sy) * f - Math.sin(f * Math.PI) * 26;
+        ctx.fillRect(Math.round(x), Math.round(y), 2, 2);
+      }
+    }
+    if (t.siren) {
+      ctx.fillStyle = (t.frame >> 4) & 1 ? 'rgba(255,40,40,0.12)' : 'rgba(40,120,255,0.12)';
+      ctx.fillRect(0, HORIZON, W, DASH_Y - HORIZON);
+    }
+
+    // The cab: windshield frame, pillars and dashboard.
+    ctx.fillStyle = '#8f1a14';
+    ctx.fillRect(0, HORIZON - 4, W, 4); ctx.fillRect(0, HORIZON, 12, DASH_Y - HORIZON); ctx.fillRect(W - 12, HORIZON, 12, DASH_Y - HORIZON);
+    ctx.fillStyle = '#2b2f3a'; ctx.fillRect(0, DASH_Y, W, H - DASH_Y);
+    ctx.fillStyle = '#d8352c'; ctx.fillRect(0, DASH_Y, W, 3);
+    const flashA = (t.frame >> 3) & 1;
+    ctx.fillStyle = t.siren && flashA ? '#ff3b30' : '#4a2020'; ctx.fillRect(W / 2 - 30, 34, 14, 6);
+    ctx.fillStyle = t.siren && !flashA ? '#2f7bff' : '#1f2a4a'; ctx.fillRect(W / 2 + 16, 34, 14, 6);
+
+    // The wheel turns with the steering, and two hands hold it at 9 and 3.
+    const { cx, cy, r } = WHEEL, a = t.steer * 1.1;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#15151a'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = '#3a3f4c'; ctx.lineWidth = 3;
+    for (let k = 0; k < 3; k++) {
+      const th = a + k * 2 * Math.PI / 3;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.sin(th) * r, cy - Math.cos(th) * r); ctx.stroke();
+    }
+    ctx.fillStyle = '#d8352c'; ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI * 2); ctx.fill();
+    for (const side of [-1, 1]) {
+      const th = side * Math.PI / 2 + a;
+      const hx = cx + Math.sin(th) * r, hy = cy - Math.cos(th) * r;
+      ctx.strokeStyle = '#d8352c'; ctx.lineWidth = 8;
+      ctx.beginPath(); ctx.moveTo(hx + Math.sin(th) * 14, hy - Math.cos(th) * 14); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.fillStyle = '#f4c7a1'; ctx.beginPath(); ctx.arc(hx, hy, 5.5, 0, Math.PI * 2); ctx.fill();
+    }
+
+    for (const b of DASH_BTNS) {
+      ctx.beginPath(); ctx.arc(b.x, b.y, 16, 0, Math.PI * 2);
+      ctx.fillStyle = btnOn(b.id) ? '#ffd23f' : b.col; ctx.fill();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.font = '14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffffff'; ctx.fillText(b.icon, b.x, b.y + 1);
+      text(b.label, b.x, b.y + 25, 7, '#ffffff', 'center', false);
+    }
+
+    // Top bar: back, how far along the drive, and fires put out.
+    ctx.fillStyle = 'rgba(22,33,58,0.6)'; ctx.fillRect(0, 0, W, 22);
+    text('חזרה', 28, 11, 7, '#ffffff', 'center', false);
+    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(60, 9, W - 150, 4);
+    ctx.fillStyle = '#7ee36b'; ctx.fillRect(60, 9, (W - 150) * Math.min(1, t.z / DRIVE_LEN), 4);
+    text('כיבינו: ' + t.fires, W - 8, 11, 8, '#ffffff', 'right');
+    if (t.msg) text(t.msg.text, W / 2, 40, 12, '#ffd23f', 'center');
+    if (t.arrived) {
+      ctx.fillStyle = 'rgba(22,33,58,0.8)'; ctx.fillRect(0, 60, W, 90);
+      text('הגענו לתחנה!', W / 2, 88, 18, '#ffd23f');
+      text('כיבינו ' + t.fires + ' שריפות', W / 2, 112, 9, '#ffffff', 'center', false);
+      if ((t.frame >> 5) & 1) text('לחצו כדי לחזור לתפריט', W / 2, 136, 8, '#ffffff', 'center', false);
+    }
+    ctx.restore();
+  }
+
   // ---------------------------------------------------------------- shell
   function resize() {
     const stage = document.getElementById('stage');
@@ -1695,8 +2027,12 @@
       screenJump.add(ev.pointerId); touch.jump = true;
       return;
     }
+    if (state === 'truck') return;
     if (state === 'album') { setState('title'); return; }
     if (state === 'title') {
+      if (truckBtn && gx >= truckBtn.x && gx <= truckBtn.x + truckBtn.w && gy >= truckBtn.y && gy <= truckBtn.y + truckBtn.h + 4) {
+        startTruck(); return;
+      }
       if (albumBtn && gx >= albumBtn.x && gx <= albumBtn.x + albumBtn.w && gy >= albumBtn.y && gy <= albumBtn.y + albumBtn.h + 4) {
         charIdx = 0; loadStickers(); setState('album'); sfx('cp');
         return;
@@ -1779,10 +2115,15 @@
     resize();
     window.addEventListener('resize', resize);
     canvas.addEventListener('pointerdown', onTap);
+    canvas.addEventListener('pointerdown', truckDown);
+    window.addEventListener('pointermove', truckMove);
+    window.addEventListener('pointerup', truckUp);
+    window.addEventListener('pointercancel', truckUp);
     canvas.addEventListener('pointerup', releaseScreenJump);
     canvas.addEventListener('pointercancel', releaseScreenJump);
     window.addEventListener('keydown', e => {
       initAudio();
+      if (state === 'truck') trKey(e.code);
       if (KEYMAP[e.code]) { keys.add(e.code); e.preventDefault(); }
       if (e.code === 'Enter' || e.code === 'Space') {
         if (state === 'album') setState('title');
@@ -1815,7 +2156,7 @@
   // Exposed for automated checks; harmless in play.
   window.__rescue5 = {
     get state() { return state; }, get player() { return player; }, get score() { return score; },
-    get cam() { return cam; }, get level() { return level; }, get ents() { return ents; }, startGame, input: touch, setPaused,
+    get cam() { return cam; }, get tr() { return tr; }, get level() { return level; }, get ents() { return ents; }, startGame, input: touch, setPaused,
   };
 
   const go = () => (document.fonts && document.fonts.load ? document.fonts.load(`800 10px ${FONT}`).catch(() => {}) : Promise.resolve()).then(boot);

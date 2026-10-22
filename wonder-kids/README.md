@@ -48,6 +48,16 @@ badge, finishing with every heart). They are kept per hero in the
 browser, shown at the end of each level and in the album on the title
 screen.
 
+## Fire truck simulator
+
+The title screen's blue button opens a drive from inside the cab. Two
+hands hold the wheel: drag the wheel (or use the arrow keys) to steer
+around cars, cones and puddles. Dashboard buttons: צ'קלקה (siren, S),
+כריזה (announcement, Enter), צופר (horn, H), מים (water cannon, hold
+Space) and בלם (brake, hold the down arrow). Fires along the buildings
+are put out with the water cannon; three fires earn the "כיבוי שריפות"
+sticker. Escape or the top-left חזרה returns to the title.
+
 ## Adding a hero
 
 Heroes live in `CHARACTERS` at the top of `www/game.js`. Each one has a
