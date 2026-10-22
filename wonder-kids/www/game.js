@@ -440,50 +440,70 @@
   // 12 goes in row 11.
   //
   // "tiny" levels are for the youngest: one long street with no real
-  // pits to die in, slow enemies, lots of food, and hint stops ('hint')
-  // that pause the game and show where to tap.
+  // pits to die in, slow enemies and lots of food.
   const TINY_LEVELS = [{
-    id: '1', name: 'העיר', width: 130,
-    zones: [[0, 'city']],
+    id: '1', name: 'העיר', width: 260,
+    zones: [[0, 'city'], [125, 'park'], [190, 'site'], [232, 'city']],
     build(L) {
       L.ground(0, 41); L.ground(43, 83); L.bricks(55, 6, 6);
-      L.ground(84, 95, 11); L.ground(96, 129);
+      L.ground(84, 95, 11); L.ground(96, 132); L.ground(134, 143);
+      L.ground(144, 155, 11); L.ground(156, 175); L.bricks(167, 6, 5);
+      L.ground(177, 214); L.ground(216, 259);
     },
     ents: [
       ['deco', 0, 11, 'firetruck'],
       ['apple', 5, 10], ['box', 7, 11, 'hose'], ['banana', 10, 10],
-      ['hint', 15, 11, 'jump'], ['barrier', 15, 11], ['apple', 15, 8],
+      ['barrier', 15, 11], ['apple', 15, 8],
       ['carrot', 19, 10], ['flame', 24, 11], ['pizza', 28, 10],
       ['raccoon', 35, 11], ['apple', 38, 10],
-      ['hint', 42, 11, 'jump'], ['banana', 42, 8], ['apple', 47, 10],
+      ['banana', 42, 8], ['apple', 47, 10],
       ['tramp', 52, 11], ['icecream', 57, 5], ['badge', 59, 5], ['apple', 55, 3],
       ['carrot', 63, 10], ['box', 66, 11, 'scooter'],
       ['cp', 71, 11], ['deco', 72, 11, 'ambulance'],
       ['banana', 76, 10], ['cone', 79, 11],
-      ['hint', 84, 11, 'jump'], ['apple', 86, 9], ['flame', 90, 10], ['pizza', 93, 7],
+      ['apple', 86, 9], ['flame', 90, 10], ['pizza', 93, 7],
       ['carrot', 99, 10], ['raccoon', 103, 11], ['box', 106, 11, 'star'],
       ['raccoon', 111, 11], ['raccoon', 114, 11], ['apple', 117, 10], ['icecream', 119, 9],
-      ['goal', 122, 11], ['deco', 113, 11, 'police'],
+      ['deco', 113, 11, 'police'],
+      ['apple', 124, 10], ['carrot', 128, 10], ['flame', 130, 11], ['banana', 133, 8],
+      ['raccoon', 138, 11], ['apple', 141, 10], ['pizza', 146, 8], ['flame', 150, 10], ['cone', 153, 10],
+      ['apple', 158, 10], ['cp', 160, 11], ['deco', 161, 11, 'ambulance'],
+      ['tramp', 164, 11], ['icecream', 169, 5], ['badge', 170, 5], ['banana', 172, 10],
+      ['apple', 176, 8], ['raccoon', 180, 11], ['box', 184, 11, 'scooter'], ['apple', 187, 10],
+      ['barrier', 191, 11], ['carrot', 194, 10], ['flame', 198, 11], ['box', 202, 11, 'star'],
+      ['raccoon', 206, 11], ['raccoon', 209, 11], ['cone', 212, 11], ['apple', 215, 8], ['pizza', 219, 10],
+      ['bat', 224, 5], ['flame', 228, 11], ['banana', 231, 10], ['apple', 236, 10],
+      ['deco', 240, 11, 'police'], ['carrot', 244, 10], ['icecream', 247, 9], ['goal', 250, 11],
     ],
   }, {
-    id: '2', name: 'הפארק', width: 138,
-    zones: [[0, 'park'], [70, 'site'], [100, 'park']],
+    id: '2', name: 'הפארק', width: 270,
+    zones: [[0, 'park'], [70, 'site'], [100, 'park'], [170, 'city'], [230, 'park']],
     build(L) {
       L.ground(0, 32); L.ground(34, 71); L.bricks(45, 6, 6);
-      L.ground(72, 80, 11); L.ground(81, 90, 10); L.ground(91, 137);
+      L.ground(72, 80, 11); L.ground(81, 90, 10); L.ground(91, 140);
+      L.ground(142, 170); L.bricks(155, 6, 6); L.ground(171, 182, 11);
+      L.ground(183, 200); L.ground(202, 269);
     },
     ents: [
       ['deco', 0, 11, 'police'],
       ['box', 5, 11, 'hose'], ['apple', 8, 10], ['flame', 14, 11], ['banana', 16, 9], ['flame', 19, 11],
       ['carrot', 23, 10], ['raccoon', 27, 11],
-      ['hint', 33, 11, 'jump'], ['apple', 33, 8], ['pizza', 38, 10],
+      ['apple', 33, 8], ['pizza', 38, 10],
       ['tramp', 42, 11], ['icecream', 47, 5], ['badge', 49, 5],
       ['banana', 54, 10], ['cone', 58, 11], ['apple', 61, 10],
       ['cp', 64, 11], ['deco', 65, 11, 'ambulance'],
-      ['hint', 72, 11, 'jump'], ['box', 75, 10, 'scooter'], ['hint', 81, 11, 'jump'], ['bat', 80, 4], ['carrot', 84, 8], ['flame', 87, 9],
+      ['box', 75, 10, 'scooter'], ['bat', 80, 4], ['carrot', 84, 8], ['flame', 87, 9],
       ['apple', 94, 10], ['box', 97, 11, 'star'], ['raccoon', 101, 11], ['raccoon', 105, 11], ['raccoon', 109, 11],
       ['tire', 116, 11], ['banana', 113, 10], ['pizza', 121, 10], ['apple', 125, 10],
-      ['goal', 130, 11], ['deco', 121, 11, 'firetruck'],
+      ['deco', 121, 11, 'firetruck'],
+      ['apple', 129, 10], ['flame', 133, 11], ['raccoon', 137, 11], ['banana', 141, 8], ['carrot', 145, 10],
+      ['cone', 148, 11], ['tramp', 152, 11], ['icecream', 157, 5], ['badge', 159, 5],
+      ['cp', 164, 11], ['deco', 165, 11, 'ambulance'], ['apple', 168, 10],
+      ['pizza', 174, 8], ['flame', 177, 10], ['raccoon', 186, 11], ['box', 189, 11, 'scooter'],
+      ['banana', 193, 10], ['barrier', 197, 11], ['apple', 201, 8], ['flame', 206, 11], ['flame', 209, 11],
+      ['carrot', 212, 10], ['box', 216, 11, 'star'], ['raccoon', 220, 11], ['raccoon', 223, 11],
+      ['tire', 230, 11], ['apple', 234, 10], ['bat', 238, 5], ['pizza', 242, 10], ['cone', 246, 11],
+      ['banana', 250, 10], ['deco', 254, 11, 'police'], ['goal', 260, 11],
     ],
   }];
 
@@ -726,7 +746,7 @@
   let level, ents, parts, shots, popups, cam, player;
   let clearTotal = 0;
   let lives = 3, score = 0, hiscore = 0, checkpoint = 0, frame = 0, clearBonus = 0;
-  let charIdx = 0, levelIdx = 0, hintSeen = new Set();
+  let charIdx = 0, levelIdx = 0;
   let presetChoice = {};
   try { hiscore = +localStorage.getItem('rescue5.hi') || 0; } catch (e) { /* storage blocked */ }
   try { presetChoice = JSON.parse(localStorage.getItem('rescue5.presets') || '{}') || {}; } catch (e) { /* storage blocked */ }
@@ -740,7 +760,7 @@
     return {
       x, y: 0, w: 10, h: 22, vx: 0, vy: 0, face: 1, onGround: false, coyote: 0, jumpBuf: 0, ride: null,
       energy: ENERGY_MAX, hearts: cfg.hearts, safeX: x, hose: false, scooter: false, star: 0, smoke: 0, inv: 0, trip: 0, throwT: 0,
-      shotCd: 0, anim: 0, dead: false,
+      shotCd: 0, anim: 0, dead: false, stuck: 0, rescues: 0, rescueAt: -1,
     };
   }
 
@@ -821,14 +841,13 @@
     const o = { type: e.type, arg: e.arg, t: 0, dead: false, vx: 0, vy: 0 };
     const size = {
       raccoon: [14, 13], flame: [10, 14], bat: [12, 8], cone: [12, 12], tire: [13, 13], barrier: [14, 12],
-      box: [14, 14], tramp: [30, 10], hint: [4, 16], firetruck: [64, 30], police: [40, 20], ambulance: [46, 28], lift: [48, 10], cp: [6, 26], goal: [40, 80], badge: [9, 7],
+      box: [14, 14], tramp: [30, 10], firetruck: [64, 30], police: [40, 20], ambulance: [46, 28], lift: [48, 10], cp: [6, 26], goal: [40, 80], badge: [9, 7],
       apple: [10, 9], banana: [10, 8], carrot: [10, 9], pizza: [10, 9], icecream: [10, 10],
     }[e.type === 'deco' ? e.arg : e.type] || [10, 10];
     o.w = size[0]; o.h = size[1];
     o.x = bx + (T - o.w) / 2; o.y = by - o.h;
     if (e.type === 'lift') { o.x = bx; o.y = e.ty * T; o.x0 = bx; o.x1 = e.arg * T; o.dir = 1; o.dx = 0; o.dy = 0; }
     if (e.type === 'tramp' || e.type === 'deco') o.x = bx;
-    if (e.type === 'hint') o.x = bx;
     if (e.type === 'goal') { o.x = bx; o.y = by - o.h; }
     if (e.type === 'bat') o.y0 = o.y;
     if (e.type === 'raccoon') o.vx = -0.35 * cfg.enemySpeed;
@@ -1002,9 +1021,6 @@
           o.dx = o.x - ox;
           break;
         }
-        case 'hint':
-          if (!o.done && cfg.tapJump && p.x + p.w >= o.x - 6 && state === 'play') { o.done = true; showHint(); }
-          break;
         case 'cp':
           if (!o.on && p.x > o.x) { o.on = true; checkpoint = o.cpTx; sfx('cp'); }
           break;
@@ -1028,21 +1044,22 @@
     ents = ents.filter(o => !o.gone);
   }
 
-  // Freeze and show where to tap; the next tap jumps.
-  function showHint() {
-    setState('hint');
-    player.vx = 0;
-    touch.jump = false;
-  }
   function rescueFromPit() {
     const p = player;
     burst(p.x + 5, ROWS * T - 8, '#58c8f4', 10);
-    p.x = Math.max(cam.x, p.safeX - 8);
+    p.rescues = p.rescueAt === p.safeX ? p.rescues + 1 : 1;
+    p.rescueAt = p.safeX;
+    let x = Math.max(cam.x, p.safeX - 8);
+    if (cfg.autoRun && p.rescues >= 2) {
+      x = p.safeX + T;
+      while (x < level.w * T && !solidPx(x + p.w / 2, ROWS * T - 1)) x += T;
+      x += 4;
+    }
+    p.x = x;
     p.y = groundTopAt(p.x + p.w / 2) - p.h - 30;
     p.vx = 0; p.vy = 0; p.inv = 70; p.ride = null;
     if (cfg.drain) p.energy -= 8;
     sfx('boing');
-    if (cfg.tapJump) showHint();
   }
 
   function levelClear(goal) {
@@ -1097,6 +1114,9 @@
     const prevBottom = p.y + p.h;
     p.ride = null;
     moveBody(p);
+    if (cfg.autoRun && p.hitWall && p.onGround) {
+      if (++p.stuck > 75) { p.jumpBuf = 7; p.stuck = 0; }
+    } else p.stuck = 0;
     // Land on lifts (one-way from above).
     if (p.vy >= 0) {
       for (const o of ents) {
@@ -1160,9 +1180,6 @@
   function update() {
     frame++; stateT++;
     readInput();
-    if (state === 'hint') {
-      for (const o of ents) if (o.spawned === undefined) o.t++;
-    }
     if (state === 'play' || state === 'dying' || state === 'clear') {
       if (state === 'play' || state === 'clear') {
         if (state === 'clear') { input.left = input.right = input.jump = input.fire = false; }
@@ -1177,10 +1194,6 @@
       parts = parts.filter(q => q.t < q.life);
       for (const q of popups) { q.t++; q.y -= 0.5; }
       popups = popups.filter(q => q.t < 50);
-    }
-    if (state === 'hint' && input.jump && !prev.jump && stateT > 10) {
-      setState('play');
-      player.jumpBuf = 7;
     }
     if (state === 'intro' && stateT > (cfg.tapJump ? 170 : 110)) { setState('play'); Music.play(SONGS.city); }
     if (state === 'dying' && stateT > 140) {
@@ -1273,7 +1286,6 @@
       }
       case 'goal': drawGoal(o); break;
       case 'deco': drawVehicle(o.arg, o.x, o.y + o.h, o.t); break;
-      case 'hint': break;
       case 'item': {
         const s = { hose: ART.hose, scooter: ART.minicar, star: ART.star, smoke: ART.smoke[(o.t >> 4) & 1] }[o.arg] || ART.badge;
         drawS(s, o.x + (o.w - s.w) / 2, o.y + o.h - s.h);
@@ -1504,13 +1516,6 @@
         text('🍎 אוספים אוכל', W / 2 - 70, 155, 8, '#ffffff', 'center', false);
       }
     }
-    if (state === 'hint') {
-      const bob = Math.sin(stateT * 0.15) * 4;
-      ctx.fillStyle = 'rgba(22,33,58,0.6)'; ctx.fillRect(0, 50, W, 50);
-      text('לחצו על המסך כדי לקפוץ!', W / 2, 75, 15, '#ffd23f');
-      ctx.font = `28px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('👆', Math.round(player.x - cam.x + 5), Math.round(player.y - 22 + bob));
-    }
     if (state === 'dying' && cfg.endless && stateT > 30) {
       ctx.fillStyle = 'rgba(22,33,58,0.6)'; ctx.fillRect(0, 80, W, 44);
       text('אופס! עוד פעם…', W / 2, 102, 16, '#ffd23f');
@@ -1560,7 +1565,7 @@
       return;
     }
     if (paused) { setPaused(false); return; }
-    if (cfg.tapJump && (state === 'play' || state === 'hint') && ev.pointerId !== undefined) {
+    if (cfg.tapJump && state === 'play' && ev.pointerId !== undefined) {
       screenJump.add(ev.pointerId); touch.jump = true;
       return;
     }
@@ -1575,7 +1580,7 @@
   }
   let touchOn = false, touchBox = null;
   function syncTouchVisible() {
-    const want = touchOn && ['intro', 'play', 'hint', 'dying'].includes(state);
+    const want = touchOn && ['intro', 'play', 'dying'].includes(state);
     if (touchBox && touchBox.hidden === want) touchBox.hidden = !want;
   }
   const screenJump = new Set();
@@ -1620,7 +1625,7 @@
       const held = new Set();
       el.addEventListener('pointerdown', e => {
         e.preventDefault(); initAudio(); el.setPointerCapture(e.pointerId); held.add(e.pointerId); touch[key] = true; el.classList.add('on');
-        if (!['play', 'intro', 'dying', 'hint', 'title'].includes(state)) onTap({ clientX: -1e4, clientY: -1e4 });
+        if (!['play', 'intro', 'dying', 'title'].includes(state)) onTap({ clientX: -1e4, clientY: -1e4 });
       });
       const up = e => { held.delete(e.pointerId); if (!held.size) { touch[key] = false; el.classList.remove('on'); } };
       el.addEventListener('pointerup', up);
