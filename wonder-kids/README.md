@@ -56,7 +56,9 @@ around cars, cones and puddles. Dashboard buttons: צ'קלקה (siren, S),
 כריזה (announcement, Enter), צופר (horn, H), מים (water cannon, hold
 Space) and בלם (brake, hold the down arrow). Fires along the buildings
 are put out with the water cannon; three fires earn the "כיבוי שריפות"
-sticker. Escape or the top-left חזרה returns to the title.
+sticker. Escape or the top-left חזרה returns to the title. The siren is a real
+wail that drops the music underneath it, and the cab drives at a slow,
+easy pace.
 
 ## Adding a hero
 
