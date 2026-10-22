@@ -1,0 +1,15 @@
+{
+  "name": "rescue-five",
+  "version": "0.1.0",
+  "private": true,
+  "description": "חמישיית ההצלה — a platformer with a hero for each kid",
+  "scripts": {
+    "sync": "cap sync android",
+    "apk": "cap sync android && cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "6.2.1",
+    "@capacitor/cli": "6.2.1",
+    "@capacitor/core": "6.2.1"
+  }
+}

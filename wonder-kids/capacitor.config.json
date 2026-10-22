@@ -1,0 +1,8 @@
+{
+  "appId": "com.rotman.rescuefive",
+  "appName": "חמישיית ההצלה",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#16213a"
+  }
+}

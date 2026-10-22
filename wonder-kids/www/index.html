@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#16213a">
+<title>חמישיית ההצלה</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@800&display=swap">
+<style>
+  /* One committed look: a night-blue arcade frame around the game screen. */
+  :root {
+    --frame: #16213a;
+    --ink: #ffffff;
+    --pad: rgba(255, 255, 255, 0.16);
+    --pad-on: rgba(255, 210, 63, 0.55);
+    --jump: rgba(216, 53, 44, 0.55);
+    --water: rgba(42, 143, 208, 0.6);
+    color-scheme: dark;
+  }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--frame);
+    color: var(--ink);
+    font-family: "Rubik", Arial, sans-serif;
+    overflow: hidden;
+    touch-action: none;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #stage {
+    position: fixed; inset: 0;
+    display: grid; place-items: center;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  }
+  canvas { display: block; image-rendering: pixelated; background: #5ab4f0; }
+
+
+  #touch { position: fixed; inset: 0; pointer-events: none; }
+  #dpad, .btn { pointer-events: auto; touch-action: none; position: fixed; }
+  #dpad {
+    left: calc(env(safe-area-inset-left, 0px) + 14px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+    width: min(38vmin, 190px); height: min(22vmin, 110px);
+    border-radius: 60px; background: var(--pad);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    display: flex; justify-content: space-between; align-items: center; padding: 0 6%;
+    box-sizing: border-box;
+  }
+  .arrow { width: 0; height: 0; border-top: 16px solid transparent; border-bottom: 16px solid transparent; opacity: 0.9; }
+  .arrow.l { border-right: 22px solid var(--ink); }
+  .arrow.r { border-left: 22px solid var(--ink); }
+  #dpad[data-dir="l"] { background: linear-gradient(to right, var(--pad-on) 50%, var(--pad) 50%); }
+  #dpad[data-dir="r"] { background: linear-gradient(to left, var(--pad-on) 50%, var(--pad) 50%); }
+  .btn {
+    width: min(19vmin, 96px); height: min(19vmin, 96px); border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.45);
+    display: grid; place-items: center;
+    font: 800 min(4vmin, 18px)/1 "Rubik", Arial, sans-serif; color: var(--ink);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+  #btnA { right: calc(env(safe-area-inset-right, 0px) + 14px); bottom: calc(env(safe-area-inset-bottom, 0px) + 40px); background: var(--jump); }
+  #btnB { right: calc(env(safe-area-inset-right, 0px) + 14px + min(21vmin, 108px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); background: var(--water); }
+  .btn.on { transform: scale(0.92); filter: brightness(1.3); }
+
+  #rotate {
+    position: fixed; inset: 0; display: none; place-items: center; text-align: center;
+    background: var(--frame); font-size: 22px; padding: 24px; z-index: 5;
+  }
+  @media (orientation: portrait) and (max-width: 700px) { #rotate { display: grid; } }
+  @media (prefers-reduced-motion: reduce) { .btn.on { transform: none; } }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="game" aria-label="מסך המשחק"></canvas></div>
+<div id="touch" hidden>
+  <div id="dpad" aria-label="שמאלה וימינה"><span class="arrow l"></span><span class="arrow r"></span></div>
+  <div id="btnB" class="btn" aria-label="מים">מים</div>
+  <div id="btnA" class="btn" aria-label="קפיצה">קפיצה</div>
+</div>
+<div id="rotate"><div>📱↻<br>סובבו את הטלפון לרוחב</div></div>
+<script src="game.js"></script>
+</body>
+</html>
