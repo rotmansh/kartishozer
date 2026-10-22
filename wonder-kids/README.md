@@ -20,6 +20,20 @@ the Android SDK installed: `npm ci && npm run apk`.
 The debug keystore is committed on purpose so each new build installs
 over the previous one.
 
+## Difficulty by age
+
+`PRESETS` in `www/game.js` sets how the game plays. Each hero has a
+default, and the title screen lets a parent switch it.
+
+- **קל מאוד (age 4):** the hero walks by himself, a tap anywhere on the
+  screen jumps, the hose sprays on its own, three hearts that food
+  refills, and the game never ends. Hint stops freeze the game before
+  each jump and show where to tap. Its own two short levels.
+- **קל (age 6):** you move yourself, three hearts, slow energy drain,
+  falling into a pit just puts you back.
+- **רגיל (age 9) / קשה (age 12):** one hit, energy runs down, pits are
+  deadly; the full 222-tile level.
+
 ## Adding a hero
 
 Heroes live in `CHARACTERS` at the top of `www/game.js`. Each one has a
