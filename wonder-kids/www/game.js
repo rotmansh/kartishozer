@@ -1626,6 +1626,7 @@
     if (state === 'title') { drawTitle(); return; }
     if (state === 'album') { drawAlbum(); return; }
     if (state === 'truck') { drawTruck(); return; }
+    if (state === 'truckpick') { drawTruckPick(); return; }
     drawWorld();
     if (state === 'intro') {
       ctx.fillStyle = 'rgba(22,33,58,0.75)'; ctx.fillRect(0, 70, W, 70);
@@ -1728,23 +1729,36 @@
     tone(sfxBus, 'sawtooth', 330, t0, 0.6, 0.1); tone(sfxBus, 'sawtooth', 415, t0, 0.6, 0.08);
   }
   function splash() { if (AC) noise(sfxBus, AC.currentTime, 0.25, 0.2, 1200); }
-  let sirenOsc = null, sirenLfo = null, sirenGain = null;
+  let sirenOsc = null, sirenLfo = null, sirenGain = null, sirenDepth = null;
   // The wail is its own sound; the music drops out under it and comes back after.
-  function setSiren(on) {
+  // Wail (slow sweep) and yelp (quick chirps) are the two siren patterns.
+  function setSirenMode(mode) {
+    tr.sirenMode = mode;
+    if (!sirenLfo) return;
+    const t0 = AC.currentTime;
+    sirenLfo.type = mode === 'yelp' ? 'square' : 'sine';
+    sirenLfo.frequency.setTargetAtTime(mode === 'yelp' ? 2.6 : 0.4, t0, 0.02);
+    sirenDepth.gain.setTargetAtTime(mode === 'yelp' ? 260 : 320, t0, 0.02);
+  }
+  function setSiren(on, mode = 'wail') {
     tr.siren = on;
+    if (!on) tr.sirenMode = null;
     if (!AC) return;
     const t0 = AC.currentTime;
     musicBus.gain.setTargetAtTime(on ? 0.08 : 0.55, t0, 0.06);
     if (on && !sirenOsc) {
       sirenOsc = AC.createOscillator(); sirenOsc.type = 'sawtooth'; sirenOsc.frequency.value = 760;
-      sirenLfo = AC.createOscillator(); sirenLfo.frequency.value = 0.4;
-      const depth = AC.createGain(); depth.gain.value = 320;
-      sirenLfo.connect(depth); depth.connect(sirenOsc.frequency);
+      sirenLfo = AC.createOscillator();
+      sirenDepth = AC.createGain();
+      sirenLfo.connect(sirenDepth); sirenDepth.connect(sirenOsc.frequency);
+      setSirenMode(mode);
       const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
       sirenGain = AC.createGain(); sirenGain.gain.setValueAtTime(0, t0);
       sirenGain.gain.setTargetAtTime(0.22, t0, 0.05);
       sirenOsc.connect(lp); lp.connect(sirenGain); sirenGain.connect(sfxBus);
       sirenLfo.start(t0); sirenOsc.start(t0);
+    } else if (on && sirenOsc) {
+      setSirenMode(mode);
     } else if (!on && sirenOsc) {
       sirenGain.gain.setTargetAtTime(0, t0, 0.05);
       sirenOsc.stop(t0 + 0.4); sirenLfo.stop(t0 + 0.4);
@@ -1752,7 +1766,12 @@
     }
   }
   function pressOnce(id) {
-    if (id === 'siren') { setSiren(!tr.siren); sfx('cp'); }
+    if (id === 'siren') {
+      if (!tr.siren) setSiren(true, 'wail');
+      else if (tr.sirenMode === 'wail') setSiren(true, 'yelp');
+      else setSiren(false);
+      sfx('cp');
+    }
     else if (id === 'pa') { announce(); tr.paFlash = 30; }
     else if (id === 'horn') { honk(); tr.hornT = 30; }
   }
@@ -1760,12 +1779,14 @@
     if (code === 'KeyS') pressOnce('siren');
     else if (code === 'KeyH') pressOnce('horn');
     else if (code === 'Enter') pressOnce('pa');
+    else if (code === 'KeyN' && tr.style === 'real') tr.night = !tr.night;
     else if (code === 'Escape') leaveTruck();
   }
 
-  function startTruck() {
+  function startTruck(style) {
     charIdx = 0; loadStickers();
     tr = {
+      style, night: false, sirenMode: null,
       z: 0, x: 0, v: 0, steer: 0, steerTarget: 0, wheelDrag: null, held: new Map(),
       siren: false, paFlash: 0, hornT: 0, spraying: false, target: null, shake: 0, frame: 0, msg: null,
       items: [], blds: [], nextItem: 30, nextBld: 0, nextTree: 4, fires: 0, arrived: false,
@@ -1867,6 +1888,7 @@
     initAudio();
     const { gx, gy } = truckGamePoint(ev);
     if (tr.arrived || (gx < 56 && gy < 22)) { leaveTruck(); return; }
+    if (tr.style === 'real' && gy < 22 && gx >= 250 && gx <= 290) { tr.night = !tr.night; return; }
     if (Math.hypot(gx - WHEEL.cx, gy - WHEEL.cy) < WHEEL.r + 14) { tr.wheelDrag = ev.pointerId; steerFromPointer(gx, gy); return; }
     for (const b of DASH_BTNS) {
       if (Math.hypot(gx - b.x, gy - b.y) < 19) {
@@ -2019,6 +2041,10 @@
   }
 
   function drawTruck() {
+    if (tr.style === 'real') return drawRealTruck();
+    return drawToonTruck();
+  }
+  function drawToonTruck() {
     const t = tr;
     ctx.save();
     if (t.shake) ctx.translate(Math.round((Math.random() * 2 - 1) * 2), 0);
@@ -2156,6 +2182,354 @@
     ctx.restore();
   }
 
+  // ---- picker: which drive to take
+  const PICK_CARDS = [
+    { style: 'toon', x: 200, title: 'מצויר', line1: 'צבעים עליזים', line2: 'כמו בסרט מצויר' },
+    { style: 'real', x: 26, title: 'מציאותי', line1: 'נראה כמו אמיתי', line2: 'יום או לילה' },
+  ];
+  function drawTruckPick() {
+    drawRealSky({ z: frame * 0.5, frame }, false);
+    ctx.fillStyle = 'rgba(22,33,58,0.55)'; ctx.fillRect(0, 0, W, H);
+    text('איזו כבאית נוסעים?', W / 2, 36, 18, '#ffd23f', 'center', '#a5241d');
+    for (const c of PICK_CARDS) {
+      ctx.fillStyle = 'rgba(255,255,255,0.12)'; rr(c.x, 62, 158, 120, 12); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.drawImage(ART.firetruck, c.x + 79 - 40, 76, 80, 37);
+      text(c.title, c.x + 79, 130, 14, '#ffffff', 'center', '#16213a');
+      text(c.line1, c.x + 79, 150, 8, '#ffe9a8', 'center', false);
+      text(c.line2, c.x + 79, 164, 8, '#ffe9a8', 'center', false);
+    }
+    rr(6, 6, 46, 16, 8); ctx.fillStyle = 'rgba(22,33,58,0.7)'; ctx.fill();
+    text('חזרה', 29, 14, 7, '#ffffff', 'center', false);
+  }
+  function truckPickTap(gx, gy) {
+    if (gx < 56 && gy < 22) { setState('title'); return; }
+    for (const c of PICK_CARDS) {
+      if (gx >= c.x && gx <= c.x + 158 && gy >= 62 && gy <= 182) { startTruck(c.style); return; }
+    }
+  }
+
+  // ---- the realistic drive: the same road and rules, drawn with light, depth and texture
+  let TEX = null;
+  function noiseTile(size, colors, dots) {
+    return makeCanvas(size, size, g => {
+      g.fillStyle = colors[0]; g.fillRect(0, 0, size, size);
+      for (let i = 0; i < dots; i++) {
+        g.globalAlpha = 0.25 + rnd() * 0.5;
+        g.fillStyle = colors[1 + ((rnd() * (colors.length - 1)) | 0)];
+        g.fillRect((rnd() * size) | 0, (rnd() * size) | 0, 1 + ((rnd() * 2) | 0), 1);
+      }
+      g.globalAlpha = 1;
+    });
+  }
+  function realTextures() {
+    if (!TEX) TEX = {
+      asphalt: ctx.createPattern(noiseTile(64, ['#4a4e56', '#3a3e46', '#5a5f69', '#2f333b'], 1400), 'repeat'),
+      grass: ctx.createPattern(noiseTile(64, ['#5fa543', '#4d9038', '#7cc45a', '#3f7a2e'], 1000), 'repeat'),
+      concrete: ctx.createPattern(noiseTile(64, ['#cdc6b6', '#bab2a0', '#e0dace'], 700), 'repeat'),
+    };
+    return TEX;
+  }
+  function drawGlow(x, y, r, col) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  const STARS = Array.from({ length: 70 }, (_, i) => ({ x: (i * 73.7) % W, y: (i * 37.3) % 58, r: 0.4 + (i % 3) * 0.3, ph: i }));
+
+  function drawRealCloud(x, y, k) {
+    for (const [dx, dy, rx, ry] of [[0, 0, 13, 7], [12, -4, 14, 9], [26, 0, 12, 7], [-10, 2, 9, 5]]) {
+      ctx.fillStyle = 'rgba(190,210,230,0.5)'; ctx.beginPath(); ctx.ellipse(x + dx * k, y + dy * k + 3 * k, rx * k, ry * k, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.beginPath(); ctx.ellipse(x + dx * k, y + dy * k, rx * k, ry * k, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  function drawRealSky(t, night) {
+    ctx.fillStyle = night ? lin(0, 0, 0, HORIZON, [[0, '#050a18'], [1, '#22324f']])
+      : lin(0, 0, 0, HORIZON, [[0, '#2f7fd6'], [0.75, '#9dd4f7'], [1, '#dff3ff']]);
+    ctx.fillRect(0, 0, W, HORIZON + 2);
+    if (night) {
+      for (const st of STARS) { ctx.fillStyle = `rgba(255,255,240,${0.45 + 0.4 * Math.sin(t.frame * 0.05 + st.ph)})`; ctx.fillRect(st.x, st.y, st.r * 2, st.r * 2); }
+      ctx.fillStyle = '#f4f1d6'; ctx.beginPath(); ctx.arc(56, 26, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = night ? '#0d1a30' : '#000'; ctx.beginPath(); ctx.arc(61, 22, 9, 0, Math.PI * 2); ctx.fill();
+    } else {
+      drawGlow(300, 32, 60, 'rgba(255,246,200,0.55)');
+      ctx.fillStyle = '#fff8d6'; ctx.beginPath(); ctx.arc(300, 32, 9, 0, Math.PI * 2); ctx.fill();
+      for (const c of CLOUDS) drawRealCloud(((c.x - t.z * c.speed) % 480 + 480) % 480 - 60, c.y, c.k * 1.1);
+    }
+    // Two layers of hills on the horizon, drifting slowly with the bend of the road.
+    const off = tr ? -bend(t.z + 30) * 18 : 0;
+    for (const [col, amp, ph, y0] of [[night ? '#1b2a40' : '#7fa7a2', 9, 0.05, HORIZON + 1], [night ? '#122033' : '#4f8a4c', 5, 0.11, HORIZON + 3]]) {
+      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, y0);
+      for (let x = -20; x <= W + 20; x += 6) ctx.lineTo(x, y0 - amp - amp * Math.sin((x + off) * ph) - 2 * Math.sin((x + off) * 0.23));
+      ctx.lineTo(W + 20, y0); ctx.closePath(); ctx.fill();
+    }
+  }
+  function drawRealRoad(t, night) {
+    const tex = realTextures();
+    ctx.fillStyle = night ? '#1f3a26' : '#5fa543'; ctx.fillRect(0, HORIZON, W, DASH_Y - HORIZON + 4);
+    ctx.fillStyle = tex.grass; ctx.globalAlpha = night ? 0.35 : 0.55; ctx.fillRect(0, HORIZON, W, DASH_Y - HORIZON + 4); ctx.globalAlpha = 1;
+    const L = d => project(-1.6, t.z + d), R = d => project(1.6, t.z + d);
+    const curb = night ? '#7d7a70' : '#e7e1d2';
+    stripe(d => project(-2.25, t.z + d), d => project(-1.6, t.z + d), tex.concrete);
+    stripe(d => project(1.6, t.z + d), d => project(2.25, t.z + d), tex.concrete);
+    stripe(d => project(-1.6, t.z + d), d => project(-1.5, t.z + d), curb);
+    stripe(d => project(1.5, t.z + d), d => project(1.6, t.z + d), curb);
+    stripe(L, R, night ? '#2c2f36' : tex.asphalt);
+    stripe(d => project(-1.66, t.z + d), d => project(-1.56, t.z + d), night ? '#c8c4b0' : '#f6f3e6');
+    stripe(d => project(1.56, t.z + d), d => project(1.66, t.z + d), night ? '#c8c4b0' : '#f6f3e6');
+    for (const ox of [-0.8, 0, 0.8]) {
+      for (let z = Math.ceil(t.z / 6) * 6; z < t.z + VIEW; z += 6) {
+        if (z - t.z < 0.3) continue;
+        const a = project(ox - 0.04, z), b = project(ox + 0.04, z), c = project(ox + 0.04, z + 3), e = project(ox - 0.04, z + 3);
+        ctx.fillStyle = night ? '#b8b49f' : (ox === 0 ? '#f6f3e6' : '#e9e4cf');
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.lineTo(e.x, e.y); ctx.closePath(); ctx.fill();
+      }
+    }
+  }
+  function drawRealTree(b) {
+    const p = project(b.side * 2.4, b.z), k = 58 * p.s;
+    if (p.s < 0.02) return;
+    const R = b.h * k * 0.62, trunkH = 1.1 * k;
+    ctx.fillStyle = lin(p.x - 0.14 * k, 0, p.x + 0.14 * k, 0, [[0, '#4a3018'], [0.5, '#7a5130'], [1, '#3a2412']]);
+    ctx.fillRect(p.x - 0.13 * k, p.y - trunkH, 0.26 * k, trunkH);
+    const cy = p.y - trunkH - R * 0.35, night = tr.night;
+    for (let i = 0; i < 7; i++) {
+      const a = i * 0.9 + b.z, dx = Math.cos(a) * R * 0.55, dy = Math.sin(a * 1.3) * R * 0.3;
+      ctx.fillStyle = shade(b.col, night ? -55 : -35);
+      ctx.beginPath(); ctx.arc(p.x + dx, cy + dy + R * 0.12, R * 0.62, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = shade(b.col, night ? -15 : 0); ctx.beginPath(); ctx.arc(p.x, cy, R, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = shade(b.col, night ? 0 : 35); ctx.beginPath(); ctx.arc(p.x - R * 0.3, cy - R * 0.35, R * 0.4, 0, Math.PI * 2); ctx.fill();
+  }
+  function drawRealFlames(cx, base, w, s, life, night) {
+    const fw = (16 + 26 * s) * (0.4 + 0.6 * life);
+    drawGlow(cx, base - fw * 0.4, fw * 1.4, night ? 'rgba(255,130,40,0.6)' : 'rgba(255,110,40,0.35)');
+    for (let j = 0; j < 4; j++) {
+      const age = (frame * 0.4 + j * 16) % 60, sy = base - age * 0.7 - fw * 0.3;
+      ctx.fillStyle = `rgba(70,70,80,${0.4 * (1 - age / 60)})`;
+      ctx.beginPath(); ctx.arc(cx + (j - 1.5) * fw * 0.25, sy, 3 + age * 0.1 + fw * 0.05, 0, Math.PI * 2); ctx.fill();
+    }
+    for (const [dx, phase, hk, col] of [[-0.28, 0, 0.9, '#c8301a'], [0, 1.7, 1.25, '#ff6a1a'], [0.28, 3.1, 0.95, '#c8301a'], [0.1, 2.2, 0.7, '#ffc24a'], [-0.1, 4, 0.55, '#ffe49a']]) {
+      const h = fw * hk * (0.85 + 0.2 * Math.sin(frame * 0.3 + phase)), x = cx + dx * fw;
+      ctx.fillStyle = col; ctx.beginPath();
+      ctx.moveTo(x - fw * 0.13, base);
+      ctx.quadraticCurveTo(x - fw * 0.17, base - h * 0.55, x + Math.sin(frame * 0.2 + phase) * fw * 0.05, base - h);
+      ctx.quadraticCurveTo(x + fw * 0.17, base - h * 0.55, x + fw * 0.13, base);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+  function drawRealBuilding(b) {
+    if (b.type === 'tree') return drawRealTree(b);
+    const night = tr.night, p = project(b.side * 3.4, b.z), w = 3.2 * 58 * p.s, hgt = b.h * 15 * p.s, x = p.x - w / 2, y = p.y - hgt;
+    ctx.fillStyle = lin(x, 0, x + w, 0, [[0, shade(b.col, 14)], [0.5, b.col], [1, shade(b.col, -34)]]);
+    ctx.fillRect(x, y, w, hgt);
+    ctx.fillStyle = shade(b.col, -40); ctx.fillRect(x - w * 0.03, y, w * 1.06, Math.max(2, hgt * 0.035));
+    const sh = hgt * 0.2;
+    if (w > 14) {
+      // Storefront with an awning in two colours.
+      ctx.fillStyle = lin(0, p.y - sh, 0, p.y, [[0, night ? '#ffd888' : '#3f5566'], [1, night ? '#806020' : '#1f2b36']]);
+      ctx.fillRect(x + w * 0.08, p.y - sh * 0.85, w * 0.84, sh * 0.75);
+      const aw = Math.max(2, w / 8);
+      for (let i = 0; i * aw < w; i++) { ctx.fillStyle = i % 2 ? '#f4efe2' : b.awn; ctx.fillRect(x + i * aw, p.y - sh - 1, aw, Math.max(2, hgt * 0.05)); }
+    }
+    if (w > 10) {
+      const rowH = Math.max(4, 11 * p.s), rows = Math.max(1, Math.floor((hgt * 0.7) / rowH));
+      const cols = w > 40 ? 3 : w > 18 ? 2 : 1, ww = w / cols * 0.5, wh = rowH * 0.55;
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        const wx = x + (c + 0.25) * w / cols, wy = y + hgt * 0.06 + r * rowH;
+        ctx.fillStyle = shade(b.col, -70); ctx.fillRect(wx - 1, wy - 1, ww + 2, wh + 2);
+        const lit = night && (r * 5 + c * 3 + b.side + (b.z | 0)) % 3 === 0;
+        ctx.fillStyle = night ? (lit ? lin(0, wy, 0, wy + wh, [[0, '#ffeeb0'], [1, '#d8a040']]) : lin(0, wy, 0, wy + wh, [[0, '#23324a'], [1, '#0c1420']]))
+          : lin(0, wy, 0, wy + wh, [[0, '#e8f7ff'], [0.5, '#9ccbe8'], [1, '#5d88ad']]);
+        ctx.fillRect(wx, wy, ww, wh);
+      }
+    }
+    if (b.fire && !b.done) drawRealFlames(p.x, y, w, p.s, b.life, night);
+  }
+  function drawRealCar(p, col) {
+    const night = tr.night, w = 0.9 * 58 * p.s, h = w * 0.62, x = p.x - w / 2, y = p.y;
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(p.x, y, w * 0.6, w * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = lin(x, 0, x + w, 0, [[0, shade(col, -35)], [0.5, shade(col, 6)], [1, shade(col, -55)]]);
+    rr(x, y - h * 0.62, w, h * 0.5, w * 0.1); ctx.fill();
+    ctx.fillStyle = '#1d1f24'; rr(x + w * 0.02, y - h * 0.2, w * 0.96, h * 0.18, w * 0.05); ctx.fill();
+    ctx.fillStyle = lin(0, y - h, 0, y - h * 0.6, [[0, shade(col, -8)], [1, shade(col, -32)]]);
+    rr(x + w * 0.13, y - h, w * 0.74, h * 0.45, w * 0.14); ctx.fill();
+    ctx.fillStyle = lin(0, y - h * 0.92, 0, y - h * 0.6, [[0, night ? '#2b3a55' : '#6b90b8'], [0.5, '#1b2636'], [1, '#0f1620']]);
+    rr(x + w * 0.2, y - h * 0.9, w * 0.6, h * 0.3, w * 0.06); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.beginPath();
+    ctx.moveTo(x + w * 0.24, y - h * 0.88); ctx.lineTo(x + w * 0.38, y - h * 0.88); ctx.lineTo(x + w * 0.3, y - h * 0.62); ctx.lineTo(x + w * 0.22, y - h * 0.62); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = shade(col, -60); ctx.fillRect(x + w * 0.02, y - h * 0.45, w * 0.96, Math.max(1, h * 0.02));
+    for (const sx of [0.04, 0.76]) {
+      ctx.fillStyle = '#ff4a3d'; rr(x + w * sx, y - h * 0.44, w * 0.2, h * 0.15, w * 0.03); ctx.fill();
+      drawGlow(x + w * (sx + 0.1), y - h * 0.37, w * 0.3, night ? 'rgba(255,60,50,0.75)' : 'rgba(255,60,50,0.3)');
+    }
+    ctx.fillStyle = '#f6f3df'; rr(x + w * 0.36, y - h * 0.36, w * 0.28, h * 0.13, 1); ctx.fill();
+    ctx.fillStyle = '#2a2d36'; ctx.fillRect(x + w * 0.36, y - h * 0.36, w * 0.28, 1);
+  }
+  function drawRealItem(it) {
+    const p = project(it.ox, it.z), night = tr.night;
+    if (it.kind === 'puddle') {
+      const rx = 0.55 * 58 * p.s, ry = 0.18 * 58 * p.s + 1;
+      const g = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, rx);
+      g.addColorStop(0, night ? '#4a6a90' : '#b5e0f8'); g.addColorStop(0.7, night ? '#22364f' : '#4f8fbf'); g.addColorStop(1, 'rgba(30,60,90,0.1)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(p.x, p.y, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(p.x, p.y, rx * 0.5, ry * 0.5, 0, 0, Math.PI * 2); ctx.stroke();
+      return;
+    }
+    if (it.kind === 'cone') {
+      const w = 0.5 * 58 * p.s, h = w * 1.1, x = p.x - w / 2, y = p.y;
+      ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(p.x, y, w * 0.65, w * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#23252b'; rr(x - w * 0.1, y - w * 0.14, w * 1.2, Math.max(1, w * 0.14), 1); ctx.fill();
+      ctx.fillStyle = lin(x, 0, x + w, 0, [[0, '#ffb25c'], [0.5, '#f5731a'], [1, '#b8560c']]);
+      ctx.beginPath(); ctx.moveTo(x + w * 0.05, y - w * 0.12); ctx.lineTo(x + w * 0.95, y - w * 0.12); ctx.lineTo(x + w * 0.6, y - h); ctx.lineTo(x + w * 0.4, y - h); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#f2f2f2'; ctx.fillRect(x + w * 0.27, y - h * 0.55, w * 0.46, Math.max(1, h * 0.14));
+      return;
+    }
+    drawRealCar(p, it.col);
+  }
+
+  function drawRealTruck() {
+    const t = tr, night = t.night;
+    ctx.save();
+    if (t.shake) ctx.translate(Math.round((Math.random() * 2 - 1) * 2), 0);
+    drawRealSky(t, night);
+    drawRealRoad(t, night);
+    const list = [];
+    for (const b of t.blds) if (b.z - t.z > 0.3) list.push({ d: b.z - t.z, draw: () => drawRealBuilding(b) });
+    for (const it of t.items) if (it.z - t.z > 0.3) list.push({ d: it.z - t.z, draw: () => drawRealItem(it) });
+    list.sort((a, b) => b.d - a.d);
+    for (const o of list) o.draw();
+    if (t.spraying && t.target) {
+      const tg = project(t.target.side * 3.4, t.target.z), sx = W / 2, sy = DASH_Y - 4;
+      for (let i = 0; i < 26; i++) {
+        const f = (i / 26 + t.frame * 0.04) % 1;
+        const x = sx + (tg.x - sx) * f + Math.sin(i * 3.1) * 3, y = sy + (tg.y - sy) * f - Math.sin(f * Math.PI) * 30;
+        ctx.fillStyle = `rgba(235,250,255,${0.45 + 0.4 * (1 - f)})`;
+        ctx.beginPath(); ctx.arc(x, y, 1.4 + (1 - f), 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    if (night) {
+      ctx.fillStyle = 'rgba(4,8,24,0.35)'; ctx.fillRect(0, HORIZON, W, DASH_Y - HORIZON);
+      drawGlow(W / 2, DASH_Y - 4, 110, 'rgba(255,240,200,0.22)');
+    }
+    const flashA = (t.frame >> 3) & 1;
+    if (t.siren) {
+      ctx.fillStyle = flashA ? 'rgba(255,40,40,0.08)' : 'rgba(40,120,255,0.08)';
+      ctx.fillRect(0, HORIZON, W, DASH_Y - HORIZON);
+    }
+
+    // The windscreen frame: pillars on both sides and the header.
+    ctx.fillStyle = lin(0, 0, 14, 0, [[0, '#2a2d34'], [1, '#15171c']]); ctx.fillRect(0, 0, 14, DASH_Y);
+    ctx.fillStyle = lin(W - 14, 0, W, 0, [[0, '#15171c'], [1, '#2a2d34']]); ctx.fillRect(W - 14, 0, 14, DASH_Y);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(14, HORIZON - 1, 1, DASH_Y - HORIZON + 1); ctx.fillRect(W - 15, HORIZON - 1, 1, DASH_Y - HORIZON + 1);
+    ctx.fillStyle = lin(0, 0, 0, 6, [[0, '#24272e'], [1, '#15171c']]); ctx.fillRect(0, 0, W, 6);
+    // A faint glare across the glass.
+    ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.beginPath(); ctx.moveTo(60, 0); ctx.lineTo(120, 0); ctx.lineTo(40, HORIZON); ctx.lineTo(0, HORIZON); ctx.closePath(); ctx.fill();
+
+    // Light bar on the roof: a row of LED segments, cycling red and white and blue while the siren runs.
+    rr(W / 2 - 62, 24, 124, 10, 4); ctx.fillStyle = '#1c1f26'; ctx.fill();
+    for (let i = 0; i < 12; i++) {
+      const x = W / 2 - 58 + i * 10, phase = (t.frame >> 2) + i;
+      let col = '#2b2f38';
+      if (t.siren) col = phase % 4 === 0 || phase % 4 === 1 ? (i < 6 ? '#ff3b30' : '#ffffff') : (i < 6 ? '#ffffff' : '#3a8cff');
+      ctx.fillStyle = col; rr(x, 26, 8, 6, 2); ctx.fill();
+      if (t.siren && col !== '#2b2f38') drawGlow(x + 4, 29, 10, col === '#ffffff' ? 'rgba(255,255,255,0.35)' : col === '#ff3b30' ? 'rgba(255,59,48,0.45)' : 'rgba(58,140,255,0.45)');
+    }
+
+    // Dashboard: a dark, glossy top with a soft highlight on its edge.
+    ctx.fillStyle = lin(0, DASH_Y, 0, H, [[0, '#353b48'], [0.2, '#20242e'], [1, '#101318']]);
+    ctx.fillRect(0, DASH_Y, W, H - DASH_Y);
+    ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(14, DASH_Y, W - 28, 1);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, DASH_Y + 40, W, 1);
+    for (let x = 96; x < 288; x += 5) { ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(x, DASH_Y + 6, 1, 28); }
+
+    // Speedometer, seen through the wheel just as in a real cab.
+    const { cx, cy, r } = WHEEL;
+    const face = ctx.createRadialGradient(cx - 6, cy - 8, 2, cx, cy, 24);
+    face.addColorStop(0, '#2a303c'); face.addColorStop(1, '#07090d');
+    ctx.fillStyle = face; ctx.beginPath(); ctx.arc(cx, cy, 23, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#8c94a3'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, 22.5, 0, Math.PI * 2); ctx.stroke();
+    for (let i = 0; i <= 12; i++) {
+      const th = -2.3 + (i / 12) * 4.6, major = i % 3 === 0;
+      ctx.strokeStyle = major ? '#ffffff' : '#8c94a3'; ctx.lineWidth = major ? 1.4 : 0.8;
+      ctx.beginPath(); ctx.moveTo(cx + Math.sin(th) * 19, cy - Math.cos(th) * 19); ctx.lineTo(cx + Math.sin(th) * 15.5, cy - Math.cos(th) * 15.5); ctx.stroke();
+    }
+    const nth = -2.3 + clamp(t.v / 12, 0, 1) * 4.6;
+    ctx.strokeStyle = '#ff5a40'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.sin(nth) * 17, cy - Math.cos(nth) * 17); ctx.stroke();
+    ctx.fillStyle = '#c8ccd6'; ctx.beginPath(); ctx.arc(cx, cy, 2, 0, Math.PI * 2); ctx.fill();
+
+    // The wheel: a dark leather rim with a highlight, spokes, and a hub.
+    const a = t.steer * 1.1;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#08090c'; ctx.lineWidth = 9; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = '#3d4350'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, r - 1.5, Math.PI * 1.05, Math.PI * 1.55); ctx.stroke();
+    for (let k = 0; k < 3; k++) {
+      const th = a + k * 2 * Math.PI / 3;
+      ctx.strokeStyle = '#06070a'; ctx.lineWidth = 5.5; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.sin(th) * (r - 3), cy - Math.cos(th) * (r - 3)); ctx.stroke();
+      ctx.strokeStyle = '#2d323d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.sin(th) * (r - 3), cy - Math.cos(th) * (r - 3)); ctx.stroke();
+    }
+    const hub = ctx.createRadialGradient(cx - 1, cy - 1, 1, cx, cy, 6);
+    hub.addColorStop(0, '#4a5060'); hub.addColorStop(1, '#14161c');
+    ctx.fillStyle = hub; ctx.beginPath(); ctx.arc(cx, cy, 5.5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#c8302a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(cx, cy, 3.6, 0, Math.PI * 2); ctx.stroke();
+
+    // Two hands in dark uniform sleeves with a reflective band.
+    for (const side of [-1, 1]) {
+      const th = side * Math.PI / 2 + a;
+      const hx = cx + Math.sin(th) * r, hy = cy - Math.cos(th) * r, ux = Math.sin(th), uy = -Math.cos(th);
+      ctx.strokeStyle = '#131e34'; ctx.lineWidth = 10;
+      ctx.beginPath(); ctx.moveTo(hx + ux * 24, hy + uy * 24); ctx.lineTo(hx + ux * 7, hy + uy * 7); ctx.stroke();
+      ctx.strokeStyle = '#e4c93a'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(hx + ux * 18, hy + uy * 18); ctx.lineTo(hx + ux * 16.5, hy + uy * 16.5); ctx.stroke();
+      const skin = ctx.createRadialGradient(hx - 1.5, hy - 1.5, 1, hx, hy, 6.5);
+      skin.addColorStop(0, '#f1cba3'); skin.addColorStop(1, '#b97f57');
+      ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(hx, hy, 5.8, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(90,40,20,0.55)'; ctx.lineWidth = 0.9;
+      ctx.beginPath(); ctx.arc(hx - ux * 1.5, hy - uy * 1.5, 3, -2.2, 0.6); ctx.stroke();
+    }
+
+    // Switches: dark and round, with a coloured ring that glows when on.
+    for (const b of DASH_BTNS) {
+      const on = btnOn(b.id);
+      if (on) drawGlow(b.x, b.y, 24, 'rgba(255,210,63,0.45)');
+      const g = ctx.createRadialGradient(b.x - 3, b.y - 5, 2, b.x, b.y, 17);
+      g.addColorStop(0, '#3a404d'); g.addColorStop(1, '#0c0e13');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(b.x, b.y, 16, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = on ? '#ffd23f' : b.col; ctx.lineWidth = on ? 3 : 2.2;
+      ctx.beginPath(); ctx.arc(b.x, b.y, 14, 0, Math.PI * 2); ctx.stroke();
+      ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffffff'; ctx.fillText(b.icon, b.x, b.y + 1);
+      text(b.label, b.x, b.y + 26, 7, '#e6e9f0', 'center', false);
+    }
+
+    // Top bar: back, progress along the route, day or night, and fires put out.
+    ctx.fillStyle = 'rgba(12,16,26,0.85)'; ctx.fillRect(0, 0, W, 22);
+    rr(6, 4, 46, 14, 4); ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fill();
+    text('חזרה', 29, 11, 7, '#ffffff', 'center', false);
+    rr(60, 8, 180, 6, 3); ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fill();
+    const prog = Math.min(1, t.z / DRIVE_LEN);
+    if (prog > 0) { rr(60, 8, Math.max(6, 180 * prog), 6, 3); ctx.fillStyle = '#7ee36b'; ctx.fill(); }
+    rr(250, 4, 40, 14, 4); ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fill();
+    text(night ? 'יום' : 'לילה', 270, 11, 7, '#ffffff', 'center', false);
+    text('כיבינו: ' + t.fires, W - 8, 11, 8, '#ffffff', 'right');
+    if (t.msg) {
+      const tw = 14 * t.msg.text.length * 0.55 + 16;
+      ctx.fillStyle = 'rgba(12,16,26,0.75)'; rr(W / 2 - tw / 2, 44, tw, 18, 9); ctx.fill();
+      text(t.msg.text, W / 2, 53, 11, '#ffd23f', 'center', false);
+    }
+    if (t.arrived) {
+      ctx.fillStyle = 'rgba(12,16,26,0.85)'; rr(40, 62, W - 80, 92, 12); ctx.fill();
+      text('הגענו לתחנה!', W / 2, 90, 18, '#ffd23f');
+      text('כיבינו ' + t.fires + ' שריפות', W / 2, 114, 9, '#ffffff', 'center', false);
+      if ((t.frame >> 5) & 1) text('לחצו כדי לחזור לתפריט', W / 2, 138, 8, '#ffffff', 'center', false);
+    }
+    // A soft darkening toward the edges, like a real windscreen.
+    const vig = ctx.createRadialGradient(W / 2, H * 0.45, H * 0.35, W / 2, H * 0.45, W * 0.7);
+    vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.42)');
+    ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
   // ---------------------------------------------------------------- shell
   function resize() {
     const stage = document.getElementById('stage');
@@ -2183,10 +2557,11 @@
       return;
     }
     if (state === 'truck') return;
+    if (state === 'truckpick') { truckPickTap(gx, gy); return; }
     if (state === 'album') { setState('title'); return; }
     if (state === 'title') {
       if (truckBtn && gx >= truckBtn.x && gx <= truckBtn.x + truckBtn.w && gy >= truckBtn.y && gy <= truckBtn.y + truckBtn.h + 4) {
-        startTruck(); return;
+        setState('truckpick'); return;
       }
       if (albumBtn && gx >= albumBtn.x && gx <= albumBtn.x + albumBtn.w && gy >= albumBtn.y && gy <= albumBtn.y + albumBtn.h + 4) {
         charIdx = 0; loadStickers(); setState('album'); sfx('cp');

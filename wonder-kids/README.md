@@ -60,6 +60,14 @@ sticker. Escape or the top-left חזרה returns to the title. The siren is a re
 wail that drops the music underneath it, and the cab drives at a slow,
 easy pace.
 
+## Choosing a drive
+
+The fire truck button opens a choice: the cartoon drive or the realistic
+one. The realistic drive uses the same road, rules and controls, drawn
+with light, shadows, texture and a day or night toggle (also key N). The
+siren button cycles wail, then yelp, then off, and the music drops under
+the siren.
+
 ## Adding a hero
 
 Heroes live in `CHARACTERS` at the top of `www/game.js`. Each one has a
