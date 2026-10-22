@@ -35,6 +35,19 @@ default, and the title screen lets a parent switch it.
 - **רגיל (age 9) / קשה (age 12):** one hit, energy runs down, pits are
   deadly; the full 222-tile level.
 
+## Vehicles and stickers
+
+In the very easy levels the hero gets into a parked vehicle and drives
+it for a stretch (`drive` … `park` in the level data): a fire truck
+whose water cannon puts out fires, and an ambulance with a siren.
+Nothing can hurt him while he drives.
+
+Stickers are earned for things done in the game (rescuing the kitten,
+the helmet, driving each vehicle, the police car, the medic star, the
+badge, finishing with every heart). They are kept per hero in the
+browser, shown at the end of each level and in the album on the title
+screen.
+
 ## Adding a hero
 
 Heroes live in `CHARACTERS` at the top of `www/game.js`. Each one has a

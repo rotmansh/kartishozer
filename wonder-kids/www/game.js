@@ -11,7 +11,7 @@
   // One slot per kid. Only the first is designed so far; the rest are
   // placeholders until we decide together what each one loves.
   const CHARACTERS = [
-    { id: 'eliav', name: 'אליאב', age: 4, preset: 'tiny', world: 'עולם ההצלה', unlocked: true,
+    { id: 'ariel', name: 'אריאל', age: 4, preset: 'tiny', world: 'עולם ההצלה', unlocked: true,
       pal: { H: '#a8783a', h: '#d8ad62', d: '#76501e' } },
     { id: 'kid2', unlocked: false },
     { id: 'kid3', unlocked: false },
@@ -322,6 +322,9 @@
       g.drawImage(A.star.r, 13, 6);
       for (const wx of [10, 37]) { disc(g, wx, 23, 4, '#26262c'); disc(g, wx, 23, 2, '#9aa0aa'); }
     });
+    // Copies with the cab window cut out, for when the hero is driving.
+    A.firetruckOpen = makeCanvas(64, 30, g => { g.drawImage(A.firetruck, 0, 0); g.clearRect(50, 6, 10, 7); });
+    A.ambulanceOpen = makeCanvas(46, 28, g => { g.drawImage(A.ambulance, 0, 0); g.clearRect(37, 12, 6, 5); });
     A.minicar = withFlip(makeCanvas(28, 13, g => {
       g.fillStyle = '#f4f6fa'; g.fillRect(0, 3, 28, 6); g.fillRect(18, 1, 9, 3);
       g.fillStyle = '#1f4fb5'; g.fillRect(0, 5, 28, 2);
@@ -462,16 +465,16 @@
       ['cp', 71, 11], ['deco', 72, 11, 'ambulance'],
       ['banana', 76, 10], ['cone', 79, 11],
       ['apple', 86, 9], ['flame', 90, 10], ['pizza', 93, 7],
-      ['carrot', 99, 10], ['raccoon', 103, 11], ['box', 106, 11, 'star'],
-      ['raccoon', 111, 11], ['raccoon', 114, 11], ['apple', 117, 10], ['icecream', 119, 9],
-      ['deco', 113, 11, 'police'],
+      ['drive', 97, 11, 'firetruck'], ['flame', 103, 11], ['carrot', 105, 10], ['flame', 108, 11],
+      ['raccoon', 111, 11], ['flame', 114, 11], ['apple', 117, 10], ['icecream', 119, 9], ['flame', 121, 11],
+      ['park', 127, 11],
       ['apple', 124, 10], ['carrot', 128, 10], ['flame', 130, 11], ['banana', 133, 8],
       ['raccoon', 138, 11], ['apple', 141, 10], ['pizza', 146, 8], ['flame', 150, 10], ['cone', 153, 10],
       ['apple', 158, 10], ['cp', 160, 11], ['deco', 161, 11, 'ambulance'],
       ['tramp', 164, 11], ['icecream', 169, 5], ['badge', 170, 5], ['banana', 172, 10],
       ['apple', 176, 8], ['raccoon', 180, 11], ['box', 184, 11, 'scooter'], ['apple', 187, 10],
       ['barrier', 191, 11], ['carrot', 194, 10], ['flame', 198, 11], ['box', 202, 11, 'star'],
-      ['raccoon', 206, 11], ['raccoon', 209, 11], ['cone', 212, 11], ['apple', 215, 8], ['pizza', 219, 10],
+      ['raccoon', 206, 11], ['raccoon', 209, 11], ['box', 226, 11, 'star'], ['cone', 212, 11], ['apple', 215, 8], ['pizza', 219, 10],
       ['bat', 224, 5], ['flame', 228, 11], ['banana', 231, 10], ['apple', 236, 10],
       ['deco', 240, 11, 'police'], ['carrot', 244, 10], ['icecream', 247, 9], ['goal', 250, 11],
     ],
@@ -493,10 +496,9 @@
       ['banana', 54, 10], ['cone', 58, 11], ['apple', 61, 10],
       ['cp', 64, 11], ['deco', 65, 11, 'ambulance'],
       ['box', 75, 10, 'scooter'], ['bat', 80, 4], ['carrot', 84, 8], ['flame', 87, 9],
-      ['apple', 94, 10], ['box', 97, 11, 'star'], ['raccoon', 101, 11], ['raccoon', 105, 11], ['raccoon', 109, 11],
-      ['tire', 116, 11], ['banana', 113, 10], ['pizza', 121, 10], ['apple', 125, 10],
-      ['deco', 121, 11, 'firetruck'],
-      ['apple', 129, 10], ['flame', 133, 11], ['raccoon', 137, 11], ['banana', 141, 8], ['carrot', 145, 10],
+      ['drive', 92, 11, 'ambulance'], ['apple', 97, 10], ['raccoon', 101, 11], ['raccoon', 105, 11], ['raccoon', 109, 11],
+      ['tire', 118, 11], ['banana', 113, 10], ['pizza', 121, 10], ['apple', 125, 10], ['apple', 129, 9],
+      ['park', 132, 11], ['flame', 135, 11], ['raccoon', 137, 11], ['banana', 141, 8], ['carrot', 145, 10],
       ['cone', 148, 11], ['tramp', 152, 11], ['icecream', 157, 5], ['badge', 159, 5],
       ['cp', 164, 11], ['deco', 165, 11, 'ambulance'], ['apple', 168, 10],
       ['pizza', 174, 8], ['flame', 177, 10], ['raccoon', 186, 11], ['box', 189, 11, 'scooter'],
@@ -745,6 +747,28 @@
   let state = 'title', stateT = 0, paused = false;
   let level, ents, parts, shots, popups, cam, player;
   let clearTotal = 0;
+  // Stickers are earned for things done in the game and kept per hero.
+  const STICKERS = [
+    { id: 'kitten', name: 'הצלת חתלתול', ring: '#f39a3a' },
+    { id: 'helmet', name: 'קסדת כבאי', ring: '#d8352c' },
+    { id: 'firetruck', name: 'נהג כבאית', ring: '#d8352c' },
+    { id: 'ambulance', name: 'נהג אמבולנס', ring: '#2f7bff' },
+    { id: 'police', name: 'ניידת משטרה', ring: '#1f4fb5' },
+    { id: 'star', name: 'כוכב החובש', ring: '#1e6be0' },
+    { id: 'badge', name: 'תג שוטר', ring: '#e0a91a' },
+    { id: 'hearts', name: 'כל הלבבות', ring: '#ff4d6d' },
+  ];
+  let stickers = new Set(), newStickers = [];
+  const stickerKey = () => 'rescue5.stickers.' + CHARACTERS[charIdx].id;
+  function loadStickers() {
+    try { stickers = new Set(JSON.parse(localStorage.getItem(stickerKey()) || '[]')); } catch (e) { stickers = new Set(); }
+  }
+  function award(id) {
+    if (stickers.has(id)) return;
+    stickers.add(id); newStickers.push(id);
+    try { localStorage.setItem(stickerKey(), JSON.stringify([...stickers])); } catch (e) { /* storage blocked */ }
+    if (player) popups.push({ x: player.x, y: player.y - 26, text: 'מדבקה חדשה!', t: 0 });
+  }
   let lives = 3, score = 0, hiscore = 0, checkpoint = 0, frame = 0, clearBonus = 0;
   let charIdx = 0, levelIdx = 0;
   let presetChoice = {};
@@ -760,7 +784,7 @@
     return {
       x, y: 0, w: 10, h: 22, vx: 0, vy: 0, face: 1, onGround: false, coyote: 0, jumpBuf: 0, ride: null,
       energy: ENERGY_MAX, hearts: cfg.hearts, safeX: x, hose: false, scooter: false, star: 0, smoke: 0, inv: 0, trip: 0, throwT: 0,
-      shotCd: 0, anim: 0, dead: false, stuck: 0, rescues: 0, rescueAt: -1,
+      shotCd: 0, anim: 0, dead: false, stuck: 0, vehicle: null, rescues: 0, rescueAt: -1,
     };
   }
 
@@ -768,6 +792,7 @@
     charIdx = idx; setHero(CHARACTERS[idx]);
     cfg = PRESETS[presetFor(idx)];
     syncTouchLayout();
+    loadStickers(); newStickers = [];
     lives = 3; score = 0; levelIdx = 0; checkpoint = 0;
     startLevel(true);
   }
@@ -841,13 +866,13 @@
     const o = { type: e.type, arg: e.arg, t: 0, dead: false, vx: 0, vy: 0 };
     const size = {
       raccoon: [14, 13], flame: [10, 14], bat: [12, 8], cone: [12, 12], tire: [13, 13], barrier: [14, 12],
-      box: [14, 14], tramp: [30, 10], firetruck: [64, 30], police: [40, 20], ambulance: [46, 28], lift: [48, 10], cp: [6, 26], goal: [40, 80], badge: [9, 7],
+      box: [14, 14], tramp: [30, 10], firetruck: [64, 30], police: [40, 20], ambulance: [46, 28], drive: [64, 30], park: [4, 16], lift: [48, 10], cp: [6, 26], goal: [40, 80], badge: [9, 7],
       apple: [10, 9], banana: [10, 8], carrot: [10, 9], pizza: [10, 9], icecream: [10, 10],
-    }[e.type === 'deco' ? e.arg : e.type] || [10, 10];
+    }[e.type === 'deco' || e.type === 'drive' ? e.arg : e.type] || [10, 10];
     o.w = size[0]; o.h = size[1];
     o.x = bx + (T - o.w) / 2; o.y = by - o.h;
     if (e.type === 'lift') { o.x = bx; o.y = e.ty * T; o.x0 = bx; o.x1 = e.arg * T; o.dir = 1; o.dx = 0; o.dy = 0; }
-    if (e.type === 'tramp' || e.type === 'deco') o.x = bx;
+    if (e.type === 'tramp' || e.type === 'deco' || e.type === 'drive' || e.type === 'park') o.x = bx;
     if (e.type === 'goal') { o.x = bx; o.y = by - o.h; }
     if (e.type === 'bat') o.y0 = o.y;
     if (e.type === 'raccoon') o.vx = -0.35 * cfg.enemySpeed;
@@ -857,9 +882,38 @@
     return o;
   }
 
+  // Where the driver sits: how far the hero's box is from the vehicle's
+  // left edge, and where his head shows in the cab window.
+  const RIDES = {
+    firetruck: { off: 46, headX: 47, headY: 0, speed: 1.6, label: 'נוהגים בכבאית!' },
+    ambulance: { off: 32, headX: 31, headY: 5, speed: 1.7, label: 'נוהגים באמבולנס!' },
+  };
+  function startDriving(o) {
+    const p = player, r = RIDES[o.arg];
+    o.gone = true;
+    p.vehicle = o.arg; p.scooter = false;
+    p.x = o.x + r.off; p.vy = 0;
+    sfx('siren');
+    popups.push({ x: p.x, y: p.y - 18, text: r.label, t: 0 });
+    award(o.arg);
+  }
+  function stopDriving() {
+    const p = player, r = RIDES[p.vehicle];
+    ents.push({ type: 'deco', arg: p.vehicle, x: p.x - r.off, y: p.y + p.h - 30, w: 64, h: 30, t: 0, vx: 0, vy: 0 });
+    p.vehicle = null; p.vy = -3.2; p.inv = 30;
+    sfx('jump');
+  }
+  function extinguish(o) {
+    o.gone = true; sfx('hiss');
+    for (let i = 0; i < 8; i++) parts.push({ x: o.x + 5, y: o.y + 8, vx: (Math.random() - 0.5) * 0.8, vy: -0.5 - Math.random(), t: 0, life: 40, col: '#e6edf3', big: 1 });
+    addScore(200, o.x + 5, o.y);
+  }
+
   function hurtPlayer(from) {
     const p = player;
     if (p.dead || p.inv > 0 || state !== 'play') return;
+    // Nothing stops a fire truck or an ambulance.
+    if (p.vehicle) { if (from.type === 'flame') extinguish(from); else killEnemy(from, 100); return; }
     if (p.star > 0) { killEnemy(from, 200); return; }
     // Landing on an enemy from above knocks it out (not a fire, though).
     if (from.type !== 'flame' && p.vy > 0.5 && p.y + p.h - p.vy <= from.y + 6) {
@@ -916,14 +970,21 @@
     const p = player;
     o.gone = true;
     switch (o.arg) {
-      case 'hose': p.hose = true; sfx('item'); popups.push({ x: o.x, y: o.y, text: 'זרנוק מים!', t: 0 }); break;
-      case 'scooter': p.scooter = true; sfx('siren'); popups.push({ x: o.x, y: o.y, text: 'ניידת משטרה!', t: 0 }); break;
-      case 'star': p.star = 600; Music.rate = 1.3; sfx('siren'); popups.push({ x: o.x, y: o.y, text: 'כוכב החובש!', t: 0 }); break;
+      case 'hose': p.hose = true; sfx('item'); award('helmet'); popups.push({ x: o.x, y: o.y, text: 'זרנוק מים!', t: 0 }); break;
+      case 'scooter': p.scooter = true; sfx('siren'); award('police'); popups.push({ x: o.x, y: o.y, text: 'ניידת משטרה!', t: 0 }); break;
+      case 'star': p.star = 600; Music.rate = 1.3; sfx('siren'); award('star'); popups.push({ x: o.x, y: o.y, text: 'כוכב החובש!', t: 0 }); break;
       case 'smoke': p.smoke = 420; sfx('smoke'); popups.push({ x: o.x, y: o.y, text: 'אוי, עשן!', t: 0 }); break;
       default: addScore(2000, o.x, o.y); sfx('item');
     }
   }
 
+  // While driving, the whole vehicle touches things, not just the hero.
+  function reachBox() {
+    const p = player;
+    if (!p.vehicle) return p;
+    const r = RIDES[p.vehicle];
+    return { x: p.x - r.off, y: p.y + p.h - 28, w: 62, h: 28 };
+  }
   function updateEnts() {
     const p = player;
     for (const e of ents) {
@@ -940,7 +1001,7 @@
         if (o.y > H + 40) o.gone = true;
         continue;
       }
-      const near = overlap(p, o) && !p.dead;
+      const near = overlap(reachBox(), o) && !p.dead;
       switch (o.type) {
         case 'raccoon': {
           o.vy = Math.min(o.vy + GRAV, MAX_FALL);
@@ -985,6 +1046,7 @@
           if (near) hurtPlayer(o);
           break;
         case 'barrier':
+          if (!o.down && near && p.vehicle) { o.down = true; addScore(100, o.x, o.y); sfx('stomp'); break; }
           if (!o.down && near && cfg.autoRun) { o.down = true; sfx('trip'); p.trip = 10; p.vx *= 0.5; }
           else if (!o.down && near && p.star <= 0) {
             o.down = true; sfx('trip');
@@ -1021,6 +1083,12 @@
           o.dx = o.x - ox;
           break;
         }
+        case 'drive':
+          if (!p.vehicle && !p.dead && p.x + p.w > o.x + 30 && p.x < o.x + o.w) startDriving(o);
+          break;
+        case 'park':
+          if (p.vehicle && p.x >= o.x) stopDriving();
+          break;
         case 'cp':
           if (!o.on && p.x > o.x) { o.on = true; checkpoint = o.cpTx; sfx('cp'); }
           break;
@@ -1028,7 +1096,7 @@
           if (p.x + p.w > o.x + 6 && state === 'play') levelClear(o);
           break;
         case 'badge':
-          if (near) { o.gone = true; addScore(1000, o.x, o.y); sfx('item'); }
+          if (near) { o.gone = true; addScore(1000, o.x, o.y); sfx('item'); award('badge'); }
           break;
         default:
           if (FOOD[o.type] && near) {
@@ -1069,6 +1137,8 @@
     goal.saved = true;
     clearBonus = cfg.drain ? Math.round(player.energy) * 10 : player.hearts * 300;
     clearTotal = clearBonus;
+    award('kitten');
+    if (cfg.hearts > 1 && player.hearts === cfg.hearts) award('hearts');
     setTimeout(() => sfx('meow'), 500);
   }
 
@@ -1091,7 +1161,7 @@
     else if (cfg.autoRun) dir = 1;
     else dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
     if (dir) p.face = dir;
-    const maxV = p.scooter ? cfg.speed * 1.45 : cfg.speed;
+    const maxV = p.vehicle ? RIDES[p.vehicle].speed : p.scooter ? cfg.speed * 1.45 : cfg.speed;
     const grounded = p.onGround || p.ride;
     const acc = grounded ? (p.scooter ? cfg.accel * 0.7 : cfg.accel) : cfg.accel * 0.7;
     if (dir) p.vx = clamp(p.vx + dir * acc, -maxV, maxV);
@@ -1134,7 +1204,14 @@
     if (p.throwT > 0) p.throwT--;
     const autoShot = cfg.autoFire && p.hose && p.trip <= 0 && ents.some(o => o.spawned === undefined && !o.dead &&
       (o.type === 'flame' || ENEMY[o.type]) && (o.x - p.x) * p.face > 0 && Math.abs(o.x - p.x) < 95 && Math.abs(o.y + o.h / 2 - (p.y + 11)) < 26);
-    if ((firePressed || autoShot) && p.hose && p.shotCd === 0 && shots.length < 2) {
+    // The fire truck's water cannon sprays at anything burning ahead.
+    if (p.vehicle === 'firetruck' && p.shotCd === 0 && shots.length < 4 && ents.some(o => o.spawned === undefined && !o.dead &&
+      (o.type === 'flame' || ENEMY[o.type]) && o.x > p.x && o.x - p.x < 140)) {
+      shots.push({ x: p.x + p.w + 14, y: p.y + 4, w: 6, h: 5, vx: 3.8, vy: -1.2, t: 0 });
+      p.shotCd = 14; sfx('shoot');
+    }
+    if (p.vehicle && frame % 120 === 0) sfx('siren');
+    if (!p.vehicle && (firePressed || autoShot) && p.hose && p.shotCd === 0 && shots.length < 2) {
       shots.push({ x: p.x + (p.face > 0 ? p.w : -6), y: p.y + 9, w: 6, h: 5, vx: p.face * 3.4 + p.vx * 0.5, vy: -1.4, t: 0 });
       p.shotCd = autoShot ? 26 : 12; p.throwT = 10; sfx('shoot');
     }
@@ -1163,12 +1240,7 @@
       for (const o of ents) {
         if (o.spawned !== undefined || o.dead || o.gone) continue;
         if (!overlap(s, o)) continue;
-        if (o.type === 'flame') {
-          o.gone = true; s.gone = true; sfx('hiss');
-          for (let i = 0; i < 8; i++) parts.push({ x: o.x + 5, y: o.y + 8, vx: (Math.random() - 0.5) * 0.8, vy: -0.5 - Math.random(), t: 0, life: 40, col: '#e6edf3', big: 1 });
-          addScore(200, o.x + 5, o.y);
-          break;
-        }
+        if (o.type === 'flame') { extinguish(o); s.gone = true; break; }
         if (ENEMY[o.type]) { killEnemy(o, 100); s.gone = true; burst(s.x, s.y, '#58c8f4', 4); break; }
         if (o.type === 'box') { openBox(o); s.gone = true; break; }
       }
@@ -1296,8 +1368,8 @@
         if (FOOD[o.type]) drawS(ART.food[o.type], o.x, o.y + Math.sin((o.t + o.bob * 10) * 0.08) * 1.5);
     }
   }
-  function drawVehicle(kind, x, bottom, t) {
-    const img = ART[kind], vx = Math.round(x - cam.x), vy = Math.round(bottom - img.height);
+  function drawVehicle(kind, x, bottom, t, driven) {
+    const img = ART[driven ? kind + 'Open' : kind], vx = Math.round(x - cam.x), vy = Math.round(bottom - img.height);
     ctx.drawImage(img, vx, vy);
     const on = (t >> 3) & 1;
     const lights = {
@@ -1357,6 +1429,15 @@
       ctx.restore();
       return;
     }
+    if (p.vehicle) {
+      const r = RIDES[p.vehicle], vx = p.x - r.off, bob = Math.abs(p.vx) > 0.2 ? (frame >> 3) & 1 : 0;
+      const vy = p.y + p.h - 30 - bob;
+      const hs = heroSprite(head, 'n', 's');
+      ctx.drawImage(hs.r, 0, 0, 16, 12, Math.round(vx + r.headX - cam.x), Math.round(vy + r.headY + (p.vehicle === 'ambulance' ? 0 : 1)), 16, 12);
+      if (p.vehicle === 'firetruck') ctx.drawImage(ART.helmet.r, Math.round(vx + r.headX - cam.x), Math.round(vy + r.headY));
+      drawVehicle(p.vehicle, vx, vy + 30, frame, true);
+      return;
+    }
     drawS(s, dx, dy, left);
     if (p.hose) drawS(ART.helmet, dx, dy - 1, left);
     else if (p.scooter) drawS(ART.cap, dx, dy, left);
@@ -1412,6 +1493,34 @@
     if (p.star > 0) { ctx.drawImage(ART.star.r, ix, 5); ix += 13; }
     text('שלב ' + level.def.id, W - 74, 10, 7, '#bfe6ff', 'center', false);
   }
+  function drawSticker(id, cx, cy, r, earned) {
+    if (r < 4) return;
+    const st = STICKERS.find(x => x.id === id);
+    ctx.fillStyle = earned ? st.ring : 'rgba(255,255,255,0.12)';
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = earned ? '#ffffff' : 'rgba(22,33,58,0.5)';
+    ctx.beginPath(); ctx.arc(cx, cy, r - 2.5, 0, Math.PI * 2); ctx.fill();
+    if (!earned) { text('?', cx, cy + 1, r, 'rgba(255,255,255,0.45)', 'center', false); return; }
+    if (id === 'hearts') { drawHeart(cx - 7, cy, true); drawHeart(cx + 7, cy, true); drawHeart(cx, cy + 9, true); return; }
+    const img = { kitten: ART.kitten.r, helmet: ART.helmet.r, firetruck: ART.firetruck, ambulance: ART.ambulance,
+      police: ART.police, star: ART.star.r, badge: ART.badge.r }[id];
+    const k = Math.min((r * 1.45) / img.width, (r * 1.2) / img.height);
+    ctx.drawImage(img, Math.round(cx - img.width * k / 2), Math.round(cy - img.height * k / 2), Math.round(img.width * k), Math.round(img.height * k));
+  }
+  function drawAlbum() {
+    drawBackground(frame * 0.3);
+    ctx.fillStyle = 'rgba(22,33,58,0.78)'; ctx.fillRect(0, 0, W, H);
+    text('האלבום של ' + CHARACTERS[charIdx].name, W / 2, 22, 16, '#ffd23f', 'center', '#a5241d');
+    text(stickers.size + ' מתוך ' + STICKERS.length + ' מדבקות', W / 2, 42, 8, '#ffffff', 'center', false);
+    STICKERS.forEach((st, i) => {
+      const col = i % 4, row = (i / 4) | 0;
+      const cx = W / 2 + (1.5 - col) * 80, cy = 84 + row * 72;
+      const earned = stickers.has(st.id);
+      drawSticker(st.id, cx, cy, 24, earned);
+      text(earned ? st.name : '???', cx, cy + 34, 7, earned ? '#ffffff' : 'rgba(255,255,255,0.5)', 'center', false);
+    });
+    if ((frame >> 5) & 1) text('לחצו כדי לחזור', W / 2, 206, 8, '#ffffff', 'center', false);
+  }
   function drawHeart(cx, cy, full) {
     ctx.fillStyle = full ? '#ff4d6d' : 'rgba(255,255,255,0.25)';
     const rows = ['.XX.XX.', 'XXXXXXX', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'];
@@ -1425,6 +1534,10 @@
     text('חמישיית ההצלה', W / 2, 28, 26, '#ffd23f', 'center', '#a5241d');
     text('בחרו גיבור', W / 2, 50, 10, '#ffffff');
     if (hiscore) text('שיא: ' + hiscore, W - 30, 10, 7, '#ffffff', 'center');
+    albumBtn = { x: 6, y: 6, w: 92, h: 20 };
+    ctx.fillStyle = '#ffd23f'; ctx.fillRect(albumBtn.x, albumBtn.y, albumBtn.w, albumBtn.h);
+    ctx.fillStyle = '#a5241d'; ctx.fillRect(albumBtn.x, albumBtn.y + albumBtn.h - 2, albumBtn.w, 2);
+    text('📒 האלבום של ' + CHARACTERS[0].name, albumBtn.x + albumBtn.w / 2, albumBtn.y + 10, 7, '#16213a', 'center', false);
     const cw = 62, gap = 8, total = 5 * cw + 4 * gap, x0 = (W - total) / 2;
     titleCards = [];
     for (let i = 0; i < 5; i++) {
@@ -1462,7 +1575,7 @@
     });
     if ((frame >> 5) & 1) text('לחצו על ' + CHARACTERS[0].name + ' כדי להתחיל', W / 2, 205, 8, '#ffffff', 'center', '#3a2a1c');
   }
-  let titleCards = [], titleChips = [];
+  let titleCards = [], titleChips = [], albumBtn = null;
   let previewSprite = null, previewFor = null;
   function setHeroPreview(ch) {
     if (previewFor === ch) return;
@@ -1505,6 +1618,7 @@
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
     ctx.imageSmoothingEnabled = false;
     if (state === 'title') { drawTitle(); return; }
+    if (state === 'album') { drawAlbum(); return; }
     drawWorld();
     if (state === 'intro') {
       ctx.fillStyle = 'rgba(22,33,58,0.75)'; ctx.fillRect(0, 70, W, 70);
@@ -1521,13 +1635,25 @@
       text('אופס! עוד פעם…', W / 2, 102, 16, '#ffd23f');
     }
     if (state === 'clear' && stateT > 60) {
-      ctx.fillStyle = 'rgba(22,33,58,0.75)'; ctx.fillRect(0, 62, W, 92);
-      text('כל הכבוד! החתלתול ניצל!', W / 2, 84, 16, '#ffd23f');
-      text((cfg.drain ? 'בונוס אנרגיה: ' : 'בונוס לבבות: ') + clearTotal, W / 2, 106, 9, '#ffffff', 'center', false);
+      const got = newStickers.length;
+      ctx.fillStyle = 'rgba(22,33,58,0.78)'; ctx.fillRect(0, 34, W, got ? 150 : 100);
+      text('כל הכבוד ' + CHARACTERS[charIdx].name + '! החתלתול ניצל!', W / 2, 52, 15, '#ffd23f');
+      text((cfg.drain ? 'בונוס אנרגיה: ' : 'בונוס לבבות: ') + clearTotal, W / 2, 70, 8, '#ffffff', 'center', false);
+      let y = 86;
+      if (got) {
+        text(got === 1 ? 'קיבלת מדבקה חדשה!' : 'קיבלת ' + got + ' מדבקות חדשות!', W / 2, y, 9, '#7ee36b', 'center', false);
+        const pop = Math.min(1, (stateT - 60) / 20);
+        newStickers.forEach((id, i) => {
+          const cx = W / 2 + ((got - 1) / 2 - i) * 54;
+          drawSticker(id, cx, y + 30, 20 * pop, true);
+          text(STICKERS.find(x => x.id === id).name, cx, y + 56, 6, '#ffffff', 'center', false);
+        });
+        y += 66;
+      }
       if (clearBonus === 0) {
         const more = levelIdx + 1 < levelList().length;
-        text(more ? 'השלב הבא: ' + levelList()[levelIdx + 1].name : 'סיימת את כל השלבים! עוד שלבים בקרוב', W / 2, 124, 8, '#bfe6ff', 'center', false);
-        if ((frame >> 5) & 1) text(more ? 'לחצו כדי להמשיך' : 'לחצו כדי לחזור לתפריט', W / 2, 140, 8, '#ffffff', 'center', false);
+        text(more ? 'השלב הבא: ' + levelList()[levelIdx + 1].name : 'סיימת את כל השלבים! עוד שלבים בקרוב', W / 2, y + 6, 8, '#bfe6ff', 'center', false);
+        if ((frame >> 5) & 1) text(more ? 'לחצו כדי להמשיך' : 'לחצו כדי לחזור לתפריט', W / 2, y + 22, 8, '#ffffff', 'center', false);
       }
     }
     if (state === 'over') {
@@ -1569,7 +1695,12 @@
       screenJump.add(ev.pointerId); touch.jump = true;
       return;
     }
+    if (state === 'album') { setState('title'); return; }
     if (state === 'title') {
+      if (albumBtn && gx >= albumBtn.x && gx <= albumBtn.x + albumBtn.w && gy >= albumBtn.y && gy <= albumBtn.y + albumBtn.h + 4) {
+        charIdx = 0; loadStickers(); setState('album'); sfx('cp');
+        return;
+      }
       const chip = titleChips.find(c => gx >= c.x && gx <= c.x + c.w && gy >= c.y - 3 && gy <= c.y + c.h + 3);
       if (chip) { choosePreset(0, chip.key); sfx('cp'); return; }
       const c = titleCards.find(c => gx >= c.x && gx <= c.x + c.w && gy >= c.y && gy <= c.y + c.h);
@@ -1594,7 +1725,7 @@
     document.getElementById('btnA').classList.toggle('big', cfg.tapJump);
   }
   function afterClear() {
-    if (levelIdx + 1 < levelList().length) { levelIdx++; checkpoint = 0; startLevel(true); }
+    if (levelIdx + 1 < levelList().length) { levelIdx++; checkpoint = 0; newStickers = []; startLevel(true); }
     else setState('title');
   }
   function setPaused(v) {
@@ -1644,6 +1775,7 @@
     buildArt(); buildTiles(); buildBackgrounds();
     setHero(CHARACTERS[0]);
     cfg = PRESETS[presetFor(0)];
+    loadStickers();
     resize();
     window.addEventListener('resize', resize);
     canvas.addEventListener('pointerdown', onTap);
@@ -1653,7 +1785,8 @@
       initAudio();
       if (KEYMAP[e.code]) { keys.add(e.code); e.preventDefault(); }
       if (e.code === 'Enter' || e.code === 'Space') {
-        if (state === 'title') startGame(0);
+        if (state === 'album') setState('title');
+        else if (state === 'title') startGame(0);
         else if (state === 'over' && stateT > 40) setState('title');
         else if (state === 'clear' && clearBonus === 0 && stateT > 120) afterClear();
       }
