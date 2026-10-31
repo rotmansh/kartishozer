@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>קליפי</title>
+<meta name="description" content="עורך וידאו חכם: בוחרים מהגלריה, וה-AI חותך על הביט, מוסיף מעברים ואפקטים">
+<meta name="theme-color" content="#0f0e13">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="קליפי">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;900&family=Rubik:wght@700&family=Secular+One&family=Suez+One&family=Amatic+SC:wght@700&family=Varela+Round&display=swap">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- 1. Pick media -->
+  <section class="screen active" id="screen-home">
+    <div class="home-wrap">
+      <header class="brand">
+        <div class="logo" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <h1>קליפי</h1>
+      </header>
+      <p class="lead">בוחרים סרטונים ותמונות מהגלריה. ה-AI בוחר את הרגעים הכי טובים, חותך על הביט של השיר ומוסיף מעברים. אחר כך אפשר להוסיף טקסט, סטיקרים ושרבוטים.</p>
+
+      <div id="home-empty">
+        <label class="pick-btn" for="file-media">
+          <span class="pick-icon" aria-hidden="true">＋</span>
+          <span><b>בחירה מהגלריה</b><small>סרטונים ותמונות, כמה שרוצים</small></span>
+        </label>
+        <button class="link-btn" id="btn-demo" type="button">אין לכם קבצים עכשיו? נסו עם תמונות לדוגמה</button>
+        <ol class="how">
+          <li><b>בוחרים</b> מדיה מהגלריה</li>
+          <li><b>בוחרים</b> שיר וסגנון</li>
+          <li><b>ה-AI עורך</b> ואתם מוסיפים טאץ׳ אישי</li>
+        </ol>
+      </div>
+
+      <div id="home-picked" hidden>
+        <div class="picked-head">
+          <h2 id="picked-count">0 פריטים</h2>
+          <label class="chip-btn" for="file-media">＋ הוספה</label>
+        </div>
+        <div class="grid" id="media-grid"></div>
+      </div>
+    </div>
+    <footer class="cta-bar" id="home-cta" hidden>
+      <button class="primary" id="btn-to-music" type="button">המשך: בחירת שיר</button>
+    </footer>
+    <input type="file" id="file-media" accept="video/*,image/*" multiple hidden>
+  </section>
+
+  <!-- 2. Music -->
+  <section class="screen" id="screen-music">
+    <header class="bar">
+      <button class="icon-btn" data-back="home" type="button" aria-label="חזרה">→</button>
+      <h2>בוחרים שיר</h2><span></span>
+    </header>
+    <div class="scroll pad">
+      <p class="hint">הקצב של השיר קובע איפה ה-AI חותך. שירים מובנים לא דורשים זכויות יוצרים.</p>
+      <label class="upload-music" for="file-music">
+        <span class="pick-icon small" aria-hidden="true">♪</span>
+        <span><b>שיר מהטלפון</b><small id="custom-music-name">MP3, M4A, WAV</small></span>
+      </label>
+      <input type="file" id="file-music" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg" hidden>
+      <h3 class="sec">שירים מובנים</h3>
+      <div id="track-list" class="tracks"></div>
+    </div>
+    <footer class="cta-bar"><button class="primary" id="btn-to-style" type="button" disabled>המשך: סגנון</button></footer>
+  </section>
+
+  <!-- 3. Style -->
+  <section class="screen" id="screen-style">
+    <header class="bar">
+      <button class="icon-btn" data-back="music" type="button" aria-label="חזרה">→</button>
+      <h2>איך זה ייראה?</h2><span></span>
+    </header>
+    <div class="scroll pad">
+      <h3 class="sec">סגנון עריכה</h3>
+      <div id="style-list" class="styles"></div>
+      <h3 class="sec">אורך</h3>
+      <div class="chips" id="length-chips"></div>
+      <h3 class="sec">פורמט</h3>
+      <div class="chips" id="aspect-chips"></div>
+      <h3 class="sec">כותרת פתיחה <small>(לא חובה)</small></h3>
+      <input id="title-input" class="text-in" type="text" maxlength="40" autocomplete="off">
+      <label class="switch-row"><input type="checkbox" id="best-part" checked><span>ה-AI יבחר את הקטע הכי חזק בשיר</span></label>
+    </div>
+    <footer class="cta-bar"><button class="primary magic" id="btn-make" type="button">✨ צרו לי סרטון</button></footer>
+  </section>
+
+  <!-- 4. Processing -->
+  <section class="screen" id="screen-process">
+    <div class="process">
+      <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <h2 id="proc-title">עורכים לכם סרטון…</h2>
+      <ul id="proc-steps" class="steps"></ul>
+      <div class="progress"><div id="proc-bar"></div></div>
+    </div>
+  </section>
+
+  <!-- 5. Editor -->
+  <section class="screen" id="screen-editor">
+    <header class="ed-top">
+      <button class="icon-btn" id="btn-ed-back" type="button" aria-label="חזרה להתחלה">✕</button>
+      <div class="ed-hist">
+        <button class="icon-btn" id="btn-undo" type="button" aria-label="בטל">↶</button>
+        <button class="icon-btn" id="btn-redo" type="button" aria-label="בצע שוב">↷</button>
+      </div>
+      <button class="primary small" id="btn-export" type="button">ייצוא</button>
+    </header>
+    <div class="stage" id="stage">
+      <canvas id="cv" width="540" height="960"></canvas>
+      <div id="ov-bar" class="ov-bar" hidden></div>
+      <div id="draw-hint" class="draw-hint" hidden>ציירו עם האצבע על הסרטון</div>
+    </div>
+    <div class="transport">
+      <button class="play" id="btn-play" type="button" aria-label="נגן">▶</button>
+      <div class="time" id="time">0:00 / 0:00</div>
+      <div class="bpm" id="bpm"></div>
+    </div>
+    <div class="scrub" id="scrub" dir="ltr"><div class="scrub-clips" id="scrub-clips"></div><div class="scrub-beats" id="scrub-beats"></div><div class="scrub-ov" id="scrub-ov"></div><div class="playhead" id="playhead"></div></div>
+    <div class="panel" id="panel"></div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="clips" class="on" type="button"><i>🎞</i>קליפים</button>
+      <button data-tab="text" type="button"><i>Aa</i>טקסט</button>
+      <button data-tab="stickers" type="button"><i>😊</i>סטיקרים</button>
+      <button data-tab="draw" type="button"><i>✏️</i>שרבוט</button>
+      <button data-tab="filters" type="button"><i>◐</i>פילטר</button>
+      <button data-tab="music" type="button"><i>♪</i>מוזיקה</button>
+      <button data-tab="style" type="button"><i>✨</i>סגנון</button>
+    </nav>
+  </section>
+</div>
+
+<div class="sheet-back" id="sheet-back" hidden></div>
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="file-add" accept="video/*,image/*" multiple hidden>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
