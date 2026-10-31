@@ -8,7 +8,7 @@ const AW = 96; // analysis width
 let faceDetector = null;
 try { if ('FaceDetector' in window) faceDetector = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 5 }); } catch { faceDetector = null; }
 
-function waitEvent(el, ev, ms = 8000) {
+function waitEvent(el, ev, ms = 8000, strict = false) {
   return new Promise((res, rej) => {
     let to;
     const ok = () => { cleanup(); res(); };
@@ -16,8 +16,40 @@ function waitEvent(el, ev, ms = 8000) {
     const cleanup = () => { clearTimeout(to); el.removeEventListener(ev, ok); el.removeEventListener('error', bad); };
     el.addEventListener(ev, ok, { once: true });
     el.addEventListener('error', bad, { once: true });
-    to = setTimeout(ok, ms);
+    to = setTimeout(strict ? bad : ok, ms);
   });
+}
+
+// Open a video file robustly. iPhone .mov files carry type "video/quicktime",
+// which several browsers refuse even though the content is plain H.264/HEVC
+// in an MP4-compatible container, so we retry with an MP4 type, then a data URL.
+async function openVideo(file) {
+  const tries = [];
+  tries.push(() => URL.createObjectURL(file));
+  if (!/mp4|webm/.test(file.type)) tries.push(() => URL.createObjectURL(new Blob([file], { type: 'video/mp4' })));
+  if (file.size < 120e6) {
+    tries.push(() => new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(String(fr.result).replace(/^data:[^;]*;/, 'data:video/mp4;'));
+      fr.onerror = rej;
+      fr.readAsDataURL(file);
+    }));
+  }
+  let lastErr;
+  for (const make of tries) {
+    let url;
+    try {
+      url = await make();
+      const v = createVideoEl(url);
+      await waitEvent(v, 'loadedmetadata', 12000, true);
+      if (!(v.duration > 0) || !v.videoWidth) throw new Error('no video track');
+      return { v, url };
+    } catch (err) {
+      lastErr = err;
+      if (url && url.startsWith('blob:')) URL.revokeObjectURL(url);
+    }
+  }
+  throw lastErr || new Error('video not supported');
 }
 
 export function seekVideo(v, t) {
@@ -39,16 +71,17 @@ export function createVideoEl(url) {
 }
 
 export async function loadMedia(file, index) {
-  const url = URL.createObjectURL(file);
-  const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|m4v|webm|3gp)$/i.test(file.name);
+  const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|m4v|webm|3gp|hevc)$/i.test(file.name);
+  let url = isVideo ? null : URL.createObjectURL(file);
   const m = {
     id: uid('m'), file, url, name: file.name, type: isVideo ? 'video' : 'image',
     order: index, time: file.lastModified || 0, duration: 0, width: 0, height: 0,
     el: null, thumb: '', poster: null, analysis: null,
   };
   if (isVideo) {
-    const v = createVideoEl(url);
-    await waitEvent(v, 'loadedmetadata');
+    const opened = await openVideo(file);
+    const v = opened.v;
+    m.url = opened.url;
     // iOS needs a play/pause before frames can be drawn.
     try { await v.play(); v.pause(); } catch { /* muted autoplay may be refused */ }
     m.duration = isFinite(v.duration) ? v.duration : 0;

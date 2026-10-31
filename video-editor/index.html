@@ -35,6 +35,10 @@
           <span class="pick-icon" aria-hidden="true">＋</span>
           <span><b>בחירה מהגלריה</b><small>סרטונים ותמונות, כמה שרוצים</small></span>
         </label>
+        <div class="pick-split">
+          <label class="pick-mini" for="file-videos"><span aria-hidden="true">🎬</span> רק סרטונים</label>
+          <label class="pick-mini" for="file-photos"><span aria-hidden="true">🖼</span> רק תמונות</label>
+        </div>
         <button class="link-btn" id="btn-demo" type="button">אין לכם קבצים עכשיו? נסו עם תמונות לדוגמה</button>
         <ol class="how">
           <li><b>בוחרים</b> מדיה מהגלריה</li>
@@ -46,7 +50,10 @@
       <div id="home-picked" hidden>
         <div class="picked-head">
           <h2 id="picked-count">0 פריטים</h2>
-          <label class="chip-btn" for="file-media">＋ הוספה</label>
+          <div class="row">
+            <label class="chip-btn" for="file-videos">＋ סרטונים</label>
+            <label class="chip-btn" for="file-photos">＋ תמונות</label>
+          </div>
         </div>
         <div class="grid" id="media-grid"></div>
       </div>
@@ -55,6 +62,8 @@
       <button class="primary" id="btn-to-music" type="button">המשך: בחירת שיר</button>
     </footer>
     <input type="file" id="file-media" accept="video/*,image/*" multiple hidden>
+    <input type="file" id="file-videos" accept="video/*,.mov,.mp4,.m4v,.3gp,.webm" multiple hidden>
+    <input type="file" id="file-photos" accept="image/*" multiple hidden>
   </section>
 
   <!-- 2. Music -->

@@ -54,6 +54,9 @@ h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 400; text-wrap
 .pick-btn:active { transform: scale(.98); }
 .pick-icon { flex: none; width: 56px; height: 56px; border-radius: 50%; background: var(--rec); color: #fff; display: grid; place-items: center; font-size: 30px; font-weight: 700; }
 .pick-icon.small { width: 44px; height: 44px; font-size: 22px; background: var(--amber); color: var(--ink); }
+.pick-split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pick-mini { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 10px; border-radius: 14px; background: var(--surface); cursor: pointer; font-weight: 500; }
+.pick-mini:active { transform: scale(.98); }
 .link-btn { color: var(--amber); text-decoration: underline; text-underline-offset: 3px; padding: 12px 0; text-align: start; }
 .how { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; counter-reset: s; }
 .how li { counter-increment: s; display: flex; gap: 12px; align-items: center; color: var(--muted); }

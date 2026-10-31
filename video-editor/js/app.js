@@ -79,11 +79,13 @@ function ac() {
 }
 
 // ---------------------------------------------------------------- 1. media
-$('#file-media').addEventListener('change', async (e) => {
-  const files = [...e.target.files];
-  e.target.value = '';
-  await addFiles(files);
-});
+for (const id of ['#file-media', '#file-videos', '#file-photos']) {
+  $(id).addEventListener('change', async (e) => {
+    const files = [...e.target.files];
+    e.target.value = '';
+    await addFiles(files);
+  });
+}
 $('#btn-demo').addEventListener('click', async () => {
   toast('יוצרים תמונות לדוגמה…');
   await addFiles(await makeDemoFiles());
@@ -97,17 +99,29 @@ async function addFiles(files) {
   const startIdx = S.media.length;
   const pending = files.map((f, i) => ({ id: 'p' + i, pending: true, name: f.name }));
   renderGrid(pending);
+  const failed = [];
   for (let i = 0; i < files.length; i++) {
     try {
       const m = await loadMedia(files[i], startIdx + i);
       S.media.push(m);
     } catch (err) {
       console.warn(err);
-      toast(`לא הצלחנו לפתוח את ${files[i].name}`);
+      failed.push(files[i].name || 'קובץ');
     }
     renderGrid(pending.slice(i + 1));
   }
-  return S.media.slice(startIdx);
+  const added = S.media.slice(startIdx);
+  const nv = added.filter((m) => m.type === 'video').length;
+  if (failed.length) {
+    openSheet(`<h3>${failed.length === 1 ? 'קובץ אחד לא נפתח' : `${failed.length} קבצים לא נפתחו`}</h3>
+      <p class="note">${failed.map(escapeHtml).join('<br>')}</p>
+      <p class="note">הדפדפן לא הצליח לנגן אותם. זה קורה בעיקר עם סרטוני HEVC מאייפון בכרום או באנדרואיד. מה אפשר לעשות: לפתוח את קליפי בספארי, או לשנות באייפון את הגדרות ← מצלמה ← פורמטים ל"תואם ביותר".</p>
+      <button type="button" class="btn" id="fail-ok">הבנתי</button>`, (sh) => $('#fail-ok', sh).addEventListener('click', closeSheet));
+  } else if (added.length) {
+    toast(`נוספו ${nv} סרטונים ו-${added.length - nv} תמונות`);
+  }
+  if (!S.media.length) { $('#home-empty').hidden = false; $('#home-picked').hidden = true; $('#home-cta').hidden = true; }
+  return added;
 }
 
 function renderGrid(pending = []) {
