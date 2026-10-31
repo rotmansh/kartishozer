@@ -1136,6 +1136,24 @@ async function runExport([w, h]) {
   const name = `klipi-${new Date().toISOString().slice(0, 10)}.${res.ext}`;
   const file = new File([res.blob], name, { type: res.type });
   const url = URL.createObjectURL(res.blob);
+  // Inside a claude.ai artifact, files are saved through the viewer's downloads capability.
+  let dl = null;
+  try { dl = (await window.claude?.use?.('downloads')) || null; } catch { dl = null; }
+  if (dl) {
+    openSheet(`<h3>הסרטון מוכן 🎉</h3>
+      <video class="preview-video" src="${url}" controls playsinline></video>
+      <button type="button" class="primary" id="x-save">שמירה (${(res.blob.size / 1e6).toFixed(1)}MB)</button>
+      <p class="note">באפליקציית Claude לאייפון נפתח תפריט השיתוף: בוחרים "שמירת סרטון".</p>
+      <button type="button" class="btn" id="x-close">חזרה לעריכה</button>`, (sh) => {
+      $('#x-save', sh).addEventListener('click', async () => {
+        try { await dl.save({ filename: name, data: res.blob }); toast('נשמר'); }
+        catch (err) { if (err?.code !== 'declined') toast('השמירה לא זמינה כאן'); }
+      });
+      $('#x-close', sh).addEventListener('click', closeSheet);
+    });
+    closeSheet.onClose = () => URL.revokeObjectURL(url);
+    return;
+  }
   const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
   openSheet(`<h3>הסרטון מוכן 🎉</h3>
     <video class="preview-video" src="${url}" controls playsinline></video>
